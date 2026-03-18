@@ -1,0 +1,179 @@
+{
+    "tilt_example": {
+        "device_id": "DEVICE001",
+        "sensor_type": "tilt",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "data": {
+            "roll": 5.23,
+            "pitch": 3.45,
+            "raw_x": 0.091,
+            "raw_y": 0.060
+        },
+        "unit": "degrees",
+        "quality": 95,
+        "sequence": 12345,
+        "checksum": "abc123def456"
+    },
+    "vibration_example": {
+        "device_id": "DEVICE001",
+        "sensor_type": "vibration",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "data": {
+            "frequency": 5.2,
+            "amplitude_x": 0.45,
+            "amplitude_y": 0.32,
+            "amplitude_z": 0.98,
+            "rms_value": 0.52,
+            "peak_value": 1.85
+        },
+        "unit": "g (gravity)",
+        "threshold_exceeded": false,
+        "sequence": 12346,
+        "checksum": "def456ghi789"
+    },
+    "displacement_example": {
+        "device_id": "DEVICE001",
+        "sensor_type": "displacement",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "data": {
+            "horizontal": 2.54,
+            "vertical": 1.23,
+            "total": 2.82,
+            "cumulative": 45.67,
+            "rate_of_change": 0.12
+        },
+        "unit": "mm",
+        "alert_level": 0,
+        "sequence": 12347,
+        "checksum": "ghi789jkl012"
+    },
+    "rainfall_example": {
+        "device_id": "DEVICE001",
+        "sensor_type": "rainfall",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "data": {
+            "intensity": 12.4,
+            "cumulative_1h": 15.8,
+            "cumulative_24h": 125.3,
+            "cumulative_total": 1250.5,
+            "bucket_count": 158
+        },
+        "unit": "mm",
+        "rain_status": "moderate",
+        "sequence": 12348,
+        "checksum": "jkl012mno345"
+    },
+    "temperature_example": {
+        "device_id": "DEVICE001",
+        "sensor_type": "temperature",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "data": {
+            "current": 28.5,
+            "min_1h": 25.2,
+            "max_1h": 31.8,
+            "avg_1h": 28.1,
+            "humidity": 65.3
+        },
+        "unit": "°C",
+        "sensor_status": "ok",
+        "sequence": 12349,
+        "checksum": "mno345pqr678"
+    },
+    "gnss_example": {
+        "device_id": "DEVICE001",
+        "sensor_type": "gnss",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "data": {
+            "latitude": 21.028531,
+            "longitude": 105.854236,
+            "altitude": 125.45,
+            "horizontal_accuracy": 0.8,
+            "vertical_accuracy": 1.2,
+            "satellites_tracked": 12,
+            "fix_type": "fix_3d",
+            "pdop": 2.1
+        },
+        "unit": "degrees/meters",
+        "gnss_status": "fixed",
+        "sequence": 12350,
+        "checksum": "pqr678stu901"
+    },
+    "device_status_example": {
+        "device_id": "DEVICE001",
+        "device_name": "Sensor Point A - Slope 1",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "status": "online",
+        "battery_level": 87,
+        "signal_strength": -65,
+        "last_message_sent": "2026-03-18T10:30:40.000Z",
+        "message_count": 12345,
+        "error_count": 2,
+        "uptime": 86400,
+        "firmware_version": "v1.2.3"
+    },
+    "heartbeat_example": {
+        "device_id": "DEVICE001",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "status": "alive",
+        "battery": 87,
+        "signal": -65,
+        "message_id": "HEARTBEAT_12345"
+    },
+    "alert_example_critical": {
+        "alert_id": "ALERT_2026_03_18_001",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "severity": "critical",
+        "device_id": "DEVICE001",
+        "location": {
+            "latitude": 21.028531,
+            "longitude": 105.854236,
+            "site_name": "Slope A"
+        },
+        "message": "Displacement exceeded critical threshold",
+        "sensor_type": "displacement",
+        "current_value": 8.5,
+        "threshold": 5.0,
+        "unit": "mm",
+        "recommended_action": "Evacuate area immediately"
+    },
+    "alert_example_warning": {
+        "alert_id": "ALERT_2026_03_18_002",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "severity": "warning",
+        "device_id": "DEVICE001",
+        "location": {
+            "latitude": 21.028531,
+            "longitude": 105.854236,
+            "site_name": "Slope A"
+        },
+        "message": "Vibration exceeded warning threshold",
+        "sensor_type": "vibration",
+        "current_value": 1.2,
+        "threshold": 0.8,
+        "unit": "g",
+        "recommended_action": "Monitor closely"
+    },
+    "command_example_calibrate": {
+        "command_id": "CMD_001",
+        "command_type": "calibrate",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "parameters": {
+            "sensor_type": "displacement",
+            "offset": 0.0
+        }
+    },
+    "command_example_reboot": {
+        "command_id": "CMD_002",
+        "command_type": "reboot",
+        "timestamp": "2026-03-18T10:30:45.123Z",
+        "parameters": {
+            "delay_seconds": 5
+        }
+    },
+    "command_response_example": {
+        "command_id": "CMD_001",
+        "status": "success",
+        "timestamp": "2026-03-18T10:30:50.123Z",
+        "message": "Calibration completed"
+    }
+}
