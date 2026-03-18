@@ -64,12 +64,10 @@ sudo systemctl start mosquitto
 
 ### 3. Run Tests
 ```bash
-# System tests
+# mqtt protocol test
 cd test
-python3 test_mqtt_system.py
+python3 test_mqtt_protocol.py
 
-# Integration tests
-python3 test_mqtt_integration.py
 ```
 
 ### 4. Run Simulation
