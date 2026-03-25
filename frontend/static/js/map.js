@@ -87,7 +87,7 @@ function updateMarkers(devices) {
  */
 function createMarker(device) {
     const customIcon = L.divIcon({
-        html: `<div class="sensor-marker ${getStatusClass(device.status)}">
+        html: `<div class="sensor-marker ${getStatusClass(device)}">
                     🛰️
                 </div>`,
         iconSize: [40, 40],
@@ -128,7 +128,18 @@ function createMarker(device) {
 /**
  * Get status CSS class for marker
  */
-function getStatusClass(status) {
+function getStatusClass(device) {
+    // Check alert status first (has priority over device status)
+    const alertStatus = device.alert_status || 'normal';
+    
+    if (alertStatus === 'critical') {
+        return 'danger';  // Red marker for critical alert
+    } else if (alertStatus === 'warning') {
+        return 'warning';  // Orange marker for warning alert
+    }
+    
+    // Fall back to device status if no alert
+    const status = device.status || 'active';
     switch (status) {
         case 'danger':
             return 'danger';
@@ -298,11 +309,17 @@ function updateDeviceList(devices) {
         return;
     }
 
-    deviceList.innerHTML = devices.map(device => `
+    deviceList.innerHTML = devices.map(device => {
+        const alertBadge = device.alert_status && device.alert_status !== 'normal' 
+            ? `<span class="alert-badge ${device.alert_status}">⚠️ ${device.alert_status.toUpperCase()}</span>` 
+            : '';
+        
+        return `
         <div class="device-item" onclick="selectDevice('${device.device_id}')">
             <div class="device-item-title">
                 <span class="device-item-status"></span>
                 ${device.name}
+                ${alertBadge}
             </div>
             <div class="device-item-info">
                 🆔 ${device.device_id}<br/>
@@ -310,7 +327,7 @@ function updateDeviceList(devices) {
                 ⏰ ${formatTime(device.last_update)}
             </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 /**

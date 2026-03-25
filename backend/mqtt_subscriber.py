@@ -43,7 +43,7 @@ class DataValidator:
             "frequency": (0, 100),
             "amplitude_x": (0, 5),
             "amplitude_y": (0, 5),
-            "amplitude_z": (0.5, 1.5)
+            "amplitude_z": (0.5, 5.0)
         },
         "displacement": {
             "horizontal": (0, 500),
@@ -397,6 +397,15 @@ class SensorDataSubscriber:
         }
         
         print(f"🚨 {alert_msg['message']}")
+        
+        # Update device alert status in database
+        alert_status = "critical" if alert["severity"] == "critical" else "warning"
+        self.db.update_alert_status(
+            device_id=reading.device_id,
+            alert_status=alert_status,
+            alert_value=alert["value"],
+            alert_type=reading.sensor_type
+        )
         
         if self.on_alert:
             self.on_alert(alert_msg)

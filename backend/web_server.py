@@ -42,6 +42,7 @@ def get_devices():
                 'altitude': float(gnss_alt) if gnss_alt else None,
                 'name': device['name'] or device['device_id'],
                 'status': device['status'],
+                'alert_status': device.get('alert_status', 'normal'),  # Add alert status
                 'last_update': device['last_update']
             }
             

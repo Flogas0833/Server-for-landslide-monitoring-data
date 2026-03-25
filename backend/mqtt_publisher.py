@@ -315,18 +315,23 @@ class SensorPublisher:
         Simulate continuous sensor measurements
         
         Args:
-            duration_seconds: How long to simulate (seconds)
+            duration_seconds: How long to simulate (seconds). None = run indefinitely
             interval_seconds: Interval between measurements (seconds)
         """
-        print(f"\n{'='*60}")
-        print(f"Starting sensor simulation for {duration_seconds}s")
-        print(f"Measurement interval: {interval_seconds}s")
-        print(f"{'='*60}\n")
+        if duration_seconds is not None:
+            print(f"\n{'='*60}")
+            print(f"Starting sensor simulation for {duration_seconds}s")
+            print(f"Measurement interval: {interval_seconds}s")
+            print(f"{'='*60}\n")
         
         start_time = time.time()
         
         try:
-            while time.time() - start_time < duration_seconds:
+            while True:
+                # If duration_seconds is set, check if we exceeded it
+                if duration_seconds is not None and time.time() - start_time >= duration_seconds:
+                    break
+                
                 current_time = datetime.now()
                 print(f"\n[{current_time.strftime('%H:%M:%S')}] Sending measurements...")
                 
@@ -398,29 +403,95 @@ class SensorPublisher:
 # ==================== MAIN ====================
 
 if __name__ == "__main__":
+    import threading
+    
     # Configuration
     MQTT_BROKER = "localhost"
     MQTT_PORT = 1883
     PROJECT_ID = "PRJ001"
-    SITE_ID = "SITE01"
-    DEVICE_ID = "DEVICE001"
-    # MQTT_USERNAME = "username"
-    # MQTT_PASSWORD = "password"
     
-    # Create publisher
-    publisher = SensorPublisher(
-        broker_host=MQTT_BROKER,
-        broker_port=MQTT_PORT,
-        device_id=DEVICE_ID,
-        project_id=PROJECT_ID,
-        site_id=SITE_ID
-        # username=MQTT_USERNAME,
-        # password=MQTT_PASSWORD
-    )
+    # Device 1 Configuration
+    DEVICE_1 = {
+        "device_id": "DEVICE001",
+        "site_id": "SITE01",
+        "name": "Sensor North Ridge",
+        "base_lat": 21.0290,  # Vị trí phía Bắc
+        "base_lon": 105.8540
+    }
     
-    # Connect and simulate
-    publisher.connect()
-    time.sleep(2)  # Wait for connection
+    # Device 2 Configuration
+    DEVICE_2 = {
+        "device_id": "DEVICE002",
+        "site_id": "SITE02",
+        "name": "Sensor South Valley",
+        "base_lat": 21.0280,  # Vị trí phía Nam
+        "base_lon": 105.8545
+    }
     
-    # Run simulation (5 minutes, measurement every 15 seconds)
-    publisher.simulate_measurements(duration_seconds=300, interval_seconds=15)
+    def run_device(device_config):
+        """Run a single device publisher in a separate thread"""
+        publisher = SensorPublisher(
+            broker_host=MQTT_BROKER,
+            broker_port=MQTT_PORT,
+            device_id=device_config["device_id"],
+            project_id=PROJECT_ID,
+            site_id=device_config["site_id"]
+        )
+        
+        # Store base coordinates for this publisher
+        publisher.base_lat = device_config["base_lat"]
+        publisher.base_lon = device_config["base_lon"]
+        
+        # Connect and simulate
+        publisher.connect()
+        time.sleep(1)  # Wait for connection
+        
+        # Override the GNSS location to use device-specific coordinates
+        original_publish_gnss = publisher.publish_gnss
+        def publish_gnss_with_offset(**kwargs):
+            kwargs['latitude'] = publisher.base_lat + random.uniform(-0.0001, 0.0001)
+            kwargs['longitude'] = publisher.base_lon + random.uniform(-0.0001, 0.0001)
+            original_publish_gnss(**kwargs)
+        publisher.publish_gnss = publish_gnss_with_offset
+        
+        # For DEVICE002: Override vibration to send abnormal data (critical alert)
+        if device_config["device_id"] == "DEVICE002":
+            original_publish_vibration = publisher.publish_vibration
+            def publish_abnormal_vibration(**kwargs):
+                # Send HIGH vibration to trigger CRITICAL alert (threshold is 1.5g)
+                print(f"\n🚨 {device_config['device_id']} - SENDING ABNORMAL VIBRATION DATA")
+                original_publish_vibration(
+                    frequency=random.uniform(5, 8),
+                    amplitude_x=random.uniform(1.8, 2.2),  # HIGH - exceeds 1.5g critical threshold
+                    amplitude_y=random.uniform(1.7, 2.1),
+                    amplitude_z=random.uniform(1.8, 2.2)
+                )
+            publisher.publish_vibration = publish_abnormal_vibration
+        
+        # Run simulation (indefinite, measurement every 15 seconds)
+        print(f"\n📍 Starting {device_config['name']} ({device_config['device_id']})")
+        print(f"   Location: ({publisher.base_lat:.4f}, {publisher.base_lon:.4f})")
+        if device_config["device_id"] == "DEVICE002":
+            print(f"   ⚠️  STATUS: ABNORMAL (High Vibration)")
+        print()
+        publisher.simulate_measurements(duration_seconds=None, interval_seconds=15)
+    
+    # Start both devices in separate threads
+    print("\n" + "="*70)
+    print("🚀 MQTT PUBLISHER - 2 DEVICE SIMULATOR")
+    print("="*70)
+    
+    thread1 = threading.Thread(target=run_device, args=(DEVICE_1,), daemon=True)
+    thread2 = threading.Thread(target=run_device, args=(DEVICE_2,), daemon=True)
+    
+    thread1.start()
+    time.sleep(2)  # Stagger the start
+    thread2.start()
+    
+    # Keep main thread alive
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n\n✓ Simulation stopped by user")
+        exit(0)

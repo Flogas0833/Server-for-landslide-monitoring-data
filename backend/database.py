@@ -60,7 +60,11 @@ class SensorDatabase:
                 name TEXT,
                 description TEXT,
                 last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                status TEXT DEFAULT 'active'
+                status TEXT DEFAULT 'active',
+                alert_status TEXT DEFAULT 'normal',
+                last_alert_time TIMESTAMP,
+                last_alert_value REAL,
+                last_alert_type TEXT
             )
         ''')
         
@@ -124,6 +128,31 @@ class SensorDatabase:
             return True
         except Exception as e:
             print(f"Error registering device: {e}")
+            return False
+    
+    def update_alert_status(self, device_id: str, alert_status: str = "normal", 
+                           alert_value: float = None, alert_type: str = None):
+        """Update alert status for a device"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            print(f"[DB] Updating alert status: {device_id}={alert_status} (value={alert_value}, type={alert_type})")
+            
+            cursor.execute('''
+                UPDATE devices 
+                SET alert_status = ?, last_alert_value = ?, last_alert_type = ?, last_alert_time = ?
+                WHERE device_id = ?
+            ''', (alert_status, alert_value, alert_type, datetime.utcnow().isoformat(), device_id))
+            
+            rows_updated = cursor.rowcount
+            conn.commit()
+            conn.close()
+            
+            print(f"[DB] ✓ Updated {rows_updated} rows for {device_id}")
+            return True
+        except Exception as e:
+            print(f"[DB] ✗ Error updating alert status: {e}")
             return False
     
     def get_all_devices(self) -> List[Dict[str, Any]]:

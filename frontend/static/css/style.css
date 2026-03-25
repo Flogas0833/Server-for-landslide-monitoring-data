@@ -220,6 +220,25 @@ main {
     margin-right: 0.5rem;
 }
 
+.alert-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    margin-left: 0.5rem;
+}
+
+.alert-badge.warning {
+    background: var(--warning-color);
+    color: white;
+}
+
+.alert-badge.critical {
+    background: var(--danger-color);
+    color: white;
+}
+
 .loading {
     text-align: center;
     padding: 2rem 1rem;
