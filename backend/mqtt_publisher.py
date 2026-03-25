@@ -414,17 +414,17 @@ if __name__ == "__main__":
     DEVICE_1 = {
         "device_id": "DEVICE001",
         "site_id": "SITE01",
-        "name": "Sensor North Ridge",
-        "base_lat": 21.0290,  # Vị trí phía Bắc
-        "base_lon": 105.8540
+        "name": "Sensor 1",
+        "base_lat": 20.9603, 
+        "base_lon": 107.0658
     }
     
     # Device 2 Configuration
     DEVICE_2 = {
         "device_id": "DEVICE002",
         "site_id": "SITE02",
-        "name": "Sensor South Valley",
-        "base_lat": 21.0280,  # Vị trí phía Nam
+        "name": "Sensor 2",
+        "base_lat": 20.0280, 
         "base_lon": 105.8545
     }
     
