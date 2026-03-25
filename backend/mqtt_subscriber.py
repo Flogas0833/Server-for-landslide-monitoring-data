@@ -11,6 +11,13 @@ from collections import defaultdict
 import paho.mqtt.client as mqtt
 from dataclasses import dataclass
 import hashlib
+import sys
+import os
+
+# Add backend directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from database import SensorDatabase
 
 @dataclass
 class SensorReading:
@@ -187,6 +194,9 @@ class SensorDataSubscriber:
         self.username = username
         self.password = password
         
+        # Initialize database
+        self.db = SensorDatabase()
+        
         # Initialize MQTT client
         self.client = mqtt.Client(client_id=f"server_{project_id}")
         self.client.on_connect = self._on_connect
@@ -217,9 +227,9 @@ class SensorDataSubscriber:
             
             # Subscribe to all sensor data topics
             topics = [
-                f"landslide/project/{self.project_id}/+/device/+/data/#",
-                f"landslide/project/{self.project_id}/+/device/+/status",
-                f"landslide/project/{self.project_id}/+/device/+/heartbeat",
+                f"landslide/project/{self.project_id}/site/+/device/+/data/#",
+                f"landslide/project/{self.project_id}/site/+/device/+/status",
+                f"landslide/project/{self.project_id}/site/+/device/+/heartbeat",
                 f"landslide/project/{self.project_id}/alerts/#"
             ]
             
@@ -283,7 +293,39 @@ class SensorDataSubscriber:
                 self.stats["invalid_messages"] += 1
                 return
             
-            # Store
+            # Store in database
+            self.db.insert_reading(
+                device_id=reading.device_id,
+                sensor_type=reading.sensor_type,
+                timestamp=reading.timestamp,
+                data=reading.data,
+                unit=reading.unit,
+                quality=reading.quality
+            )
+            
+            # If this is a GNSS reading, update device location
+            if reading.sensor_type == "gnss" and reading.data:
+                try:
+                    latitude = reading.data.get("latitude")
+                    longitude = reading.data.get("longitude")
+                    altitude = reading.data.get("altitude")
+                    
+                    if latitude is not None and longitude is not None:
+                        # Update device table with latest location
+                        conn = self.db.get_connection()
+                        cursor = conn.cursor()
+                        cursor.execute('''
+                            UPDATE devices 
+                            SET latitude = ?, longitude = ?, altitude = ?, last_update = ?
+                            WHERE device_id = ?
+                        ''', (latitude, longitude, altitude, 
+                              datetime.utcnow().isoformat(), reading.device_id))
+                        conn.commit()
+                        conn.close()
+                except Exception as e:
+                    print(f"⚠ Could not update GNSS location: {e}")
+            
+            # Store in memory
             self.device_data[reading.device_id][reading.sensor_type] = reading
             self.stats["valid_messages"] += 1
             
@@ -307,6 +349,19 @@ class SensorDataSubscriber:
         """Handle device status message"""
         device_id = payload.get("device_id")
         self.device_status[device_id] = payload
+        
+        # Register device in database if not already registered
+        project_id = payload.get("project_id", self.project_id)
+        site_id = payload.get("site_id", "default")
+        
+        self.db.register_device(
+            device_id=device_id,
+            project_id=project_id,
+            site_id=site_id,
+            latitude=payload.get("latitude", 0),
+            longitude=payload.get("longitude", 0),
+            name=payload.get("device_name", device_id)
+        )
         
         print(f"[STATUS] {device_id}: " +
               f"Battery={payload.get('battery_level')}%, " +

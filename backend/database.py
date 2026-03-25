@@ -1,0 +1,226 @@
+"""
+Database Module - Store and retrieve sensor data
+Uses SQLite for lightweight data persistence
+"""
+
+import sqlite3
+from datetime import datetime
+from typing import Dict, List, Optional, Any
+from dataclasses import asdict
+import json
+import os
+
+class SensorDatabase:
+    """SQLite database for sensor readings"""
+    
+    def __init__(self, db_path: str = "../database/sensors.db"):
+        """Initialize database"""
+        self.db_path = db_path
+        os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
+        self.init_database()
+    
+    def get_connection(self):
+        """Get database connection"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+    
+    def init_database(self):
+        """Initialize database tables"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Sensor readings table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sensor_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT NOT NULL,
+                sensor_type TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                data JSON NOT NULL,
+                unit TEXT,
+                quality INTEGER,
+                latitude REAL,
+                longitude REAL,
+                altitude REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(device_id, sensor_type, timestamp)
+            )
+        ''')
+        
+        # Device info table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS devices (
+                device_id TEXT PRIMARY KEY,
+                project_id TEXT,
+                site_id TEXT,
+                latitude REAL,
+                longitude REAL,
+                altitude REAL,
+                name TEXT,
+                description TEXT,
+                last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status TEXT DEFAULT 'active'
+            )
+        ''')
+        
+        # Create indexes for better queries
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_device_id ON sensor_readings(device_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_sensor_type ON sensor_readings(sensor_type)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON sensor_readings(timestamp)')
+        
+        conn.commit()
+        conn.close()
+    
+    def insert_reading(self, device_id: str, sensor_type: str, timestamp: str,
+                      data: Dict[str, Any], unit: str, quality: Optional[int] = None) -> bool:
+        """Insert sensor reading"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Extract location data if available
+            latitude = data.get('latitude') if sensor_type == 'gnss' else None
+            longitude = data.get('longitude') if sensor_type == 'gnss' else None
+            altitude = data.get('altitude') if sensor_type == 'gnss' else None
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO sensor_readings 
+                (device_id, sensor_type, timestamp, data, unit, quality, latitude, longitude, altitude)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (device_id, sensor_type, timestamp, json.dumps(data), unit, quality, 
+                  latitude, longitude, altitude))
+            
+            # Update device info with latest location
+            if latitude and longitude:
+                cursor.execute('''
+                    UPDATE devices 
+                    SET latitude = ?, longitude = ?, altitude = ?, last_update = CURRENT_TIMESTAMP
+                    WHERE device_id = ?
+                ''', (latitude, longitude, altitude, device_id))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error inserting reading: {e}")
+            return False
+    
+    def register_device(self, device_id: str, project_id: str, site_id: str,
+                       latitude: float = 0, longitude: float = 0, name: str = ""):
+        """Register a device"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO devices 
+                (device_id, project_id, site_id, latitude, longitude, name)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (device_id, project_id, site_id, latitude, longitude, name))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error registering device: {e}")
+            return False
+    
+    def get_all_devices(self) -> List[Dict[str, Any]]:
+        """Get all devices with latest location from GNSS readings"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Get devices
+        cursor.execute('SELECT device_id, project_id, site_id, name, status, last_update FROM devices ORDER BY device_id')
+        
+        results = []
+        for row in cursor.fetchall():
+            device_dict = dict(row)
+            device_id = device_dict['device_id']
+            
+            # Get latest GNSS reading for this device
+            cursor.execute('''
+                SELECT 
+                    json_extract(data, '$.latitude') as latitude,
+                    json_extract(data, '$.longitude') as longitude,
+                    json_extract(data, '$.altitude') as altitude
+                FROM sensor_readings 
+                WHERE device_id = ? AND sensor_type = 'gnss'
+                ORDER BY timestamp DESC
+                LIMIT 1
+            ''', (device_id,))
+            
+            gnss_row = cursor.fetchone()
+            if gnss_row:
+                gnss_dict = dict(gnss_row)
+                device_dict['latitude'] = gnss_dict.get('latitude')
+                device_dict['longitude'] = gnss_dict.get('longitude')
+                device_dict['altitude'] = gnss_dict.get('altitude')
+            else:
+                device_dict['latitude'] = None
+                device_dict['longitude'] = None
+                device_dict['altitude'] = None
+            
+            results.append(device_dict)
+        
+        conn.close()
+        return results
+    
+    def get_device_location(self, device_id: str) -> Optional[Dict[str, Any]]:
+        """Get latest location of a device"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT device_id, latitude, longitude, altitude, last_update
+            FROM devices
+            WHERE device_id = ?
+        ''', (device_id,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        return dict(row) if row else None
+    
+    def get_latest_readings(self, device_id: str, sensor_type: str, limit: int = 10) -> List[Dict]:
+        """Get latest readings for a device/sensor"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT device_id, sensor_type, timestamp, data, unit, quality
+            FROM sensor_readings
+            WHERE device_id = ? AND sensor_type = ?
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (device_id, sensor_type, limit))
+        
+        results = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        for r in results:
+            r['data'] = json.loads(r['data'])
+        
+        return results
+    
+    def get_readings_by_type(self, sensor_type: str, limit: int = 100) -> List[Dict]:
+        """Get latest readings for a sensor type across all devices"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT device_id, sensor_type, timestamp, data, unit, quality
+            FROM sensor_readings
+            WHERE sensor_type = ?
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (sensor_type, limit))
+        
+        results = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        for r in results:
+            r['data'] = json.loads(r['data'])
+        
+        return results

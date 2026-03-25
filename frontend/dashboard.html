@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Điều Khiển - Landslide Monitoring</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+
+<body>
+    <div class="dashboard">
+        <header>
+            <h1>📊 Bảng Điều Khiển Giám Sát</h1>
+            <div class="header-controls">
+                <button class="btn" onclick="location.href='/'">🗺️ Xem Bản Đồ</button>
+                <span id="refresh-time">Cập nhật: --:--:--</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Statistics Cards -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon">🛰️</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Tổng Cảm Biến</div>
+                        <div class="stat-value" id="stat-total">--</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">✓</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Cảm Biến Hoạt Động</div>
+                        <div class="stat-value" id="stat-active">--</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Cảnh Báo</div>
+                        <div class="stat-value" id="stat-warnings">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sensor Types Data -->
+            <div class="data-container">
+                <div class="section">
+                    <h2>📈 Dữ Liệu Nghiêng (Tilt)</h2>
+                    <div class="data-table" id="tilt-data">
+                        <div class="loading">Đang tải...</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🔊 Dữ Liệu Rung Động (Vibration)</h2>
+                    <div class="data-table" id="vibration-data">
+                        <div class="loading">Đang tải...</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>↔️ Dữ Liệu Dịch Chuyển (Displacement)</h2>
+                    <div class="data-table" id="displacement-data">
+                        <div class="loading">Đang tải...</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🌧️ Dữ Liệu Mưa (Rainfall)</h2>
+                    <div class="data-table" id="rainfall-data">
+                        <div class="loading">Đang tải...</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🌡️ Dữ Liệu Nhiệt Độ (Temperature)</h2>
+                    <div class="data-table" id="temperature-data">
+                        <div class="loading">Đang tải...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+
+</html>
