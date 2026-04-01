@@ -1,39 +1,5 @@
 # Landslide Monitoring - MQTT Data Collection System
 
----
-
-## 📂 PROJECT STRUCTURE
-
-```
-Server-for-landslide-monitoring-data/
-│
-├── 📚 docs/                      # Documentation & Guides
-│   ├── MQTT_PROTOCOL_DESIGN.md         # Complete protocol specification
-│   ├── MQTT_SETUP.md                   # Installation & configuration guide
-│   ├── MQTT_SUMMARY.md                 # Quick reference
-│   ├── MQTT_DIAGRAMS.md                # Architecture diagrams
-│   └── MQTT_IMPLEMENTATION_README.md   # Project overview
-│
-├── 🐍 backend/                   # Backend Implementation
-│   ├── mqtt_publisher.py               # Device simulator 
-│   ├── mqtt_subscriber.py              # Server receiver (1000+ lines)
-│
-├── ⚙️ config/                    # Configuration Files
-│   ├── mosquitto.conf                  # MQTT Broker configuration
-│   ├── mosquitto_acl.conf              # Access control list
-│   ├── requirements_mqtt.txt           # Python dependencies
-│
-├── 🧪 test/                      # Testing Suite
-│   ├── test_mqtt_protocol.py          
-│   ├── MQTT_TEST_DATA.json             # Example test payloads
-│
-├── 🗄️ database/                  # Database (Future)
-│
-└── 📝 README.md                   # This file
-```
-
----
-
 ## 🎯 PROJECT OVERVIEW
 
 Complete MQTT protocol for receiving sensor data from multiple field devices:
