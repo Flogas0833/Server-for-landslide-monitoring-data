@@ -161,7 +161,7 @@ class SensorDatabase:
         cursor = conn.cursor()
         
         # Get devices
-        cursor.execute('SELECT device_id, project_id, site_id, name, status, last_update FROM devices ORDER BY device_id')
+        cursor.execute('SELECT device_id, project_id, site_id, name, status, alert_status, last_update FROM devices ORDER BY device_id')
         
         results = []
         for row in cursor.fetchall():

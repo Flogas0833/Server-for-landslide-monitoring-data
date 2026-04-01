@@ -18,6 +18,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from database import SensorDatabase
+from config_manager import get_config_manager
 
 @dataclass
 class SensorReading:
@@ -30,93 +31,69 @@ class SensorReading:
     quality: Optional[int] = None
     checksum: Optional[str] = None
 
+
 class DataValidator:
-    """Validate sensor readings"""
+    """
+    Validate sensor readings using configuration-driven ranges and thresholds.
+    This allows extensibility without code changes.
+    """
     
-    # Valid ranges for each sensor type
-    VALID_RANGES = {
-        "tilt": {
-            "roll": (-30, 30),
-            "pitch": (-30, 30)
-        },
-        "vibration": {
-            "frequency": (0, 100),
-            "amplitude_x": (0, 5),
-            "amplitude_y": (0, 5),
-            "amplitude_z": (0.5, 5.0)
-        },
-        "displacement": {
-            "horizontal": (0, 500),
-            "vertical": (0, 500),
-            "total": (0, 500),
-            "cumulative": (0, 10000)
-        },
-        "rainfall": {
-            "intensity": (0, 200),
-            "cumulative_1h": (0, 500),
-            "cumulative_24h": (0, 1000)
-        },
-        "temperature": {
-            "current": (-20, 60),
-            "humidity": (0, 100)
-        },
-        "gnss": {
-            "latitude": (-90, 90),
-            "longitude": (-180, 180),
-            "altitude": (-500, 10000)
-        }
-    }
-    
-    ALERT_THRESHOLDS = {
-        "displacement": {
-            "warning": 5.0,
-            "critical": 8.0
-        },
-        "vibration": {
-            "warning": 0.8,
-            "critical": 1.5
-        },
-        "rainfall": {
-            "warning": 30,
-            "critical": 100
-        }
-    }
-    
-    @staticmethod
-    def validate_reading(reading: SensorReading) -> tuple[bool, str]:
+    def __init__(self, config_manager=None):
         """
-        Validate sensor reading
+        Initialize validator with configuration manager
+        
+        Args:
+            config_manager: ConfigurationManager instance (optional)
+        """
+        self.config = config_manager or get_config_manager()
+    
+    def validate_reading(self, reading: SensorReading) -> tuple[bool, str]:
+        """
+        Validate sensor reading against configuration
+        
+        Args:
+            reading: SensorReading object to validate
         
         Returns:
             Tuple of (is_valid, message)
         """
         sensor_type = reading.sensor_type
         
-        # Check if sensor type is known
-        if sensor_type not in DataValidator.VALID_RANGES:
+        # Check if sensor type is known in configuration
+        if not self.config.is_sensor_type_valid(sensor_type):
             return False, f"Unknown sensor type: {sensor_type}"
         
+        # Get valid ranges from configuration
+        valid_ranges = self.config.get_valid_ranges(sensor_type)
+        
         # Validate each field
-        valid_range = DataValidator.VALID_RANGES[sensor_type]
         for field, value in reading.data.items():
-            if field in valid_range:
-                min_val, max_val = valid_range[field]
+            if field in valid_ranges:
+                min_val, max_val = valid_ranges[field]
                 if not (min_val <= value <= max_val):
                     return False, f"Field '{field}' value {value} out of range [{min_val}, {max_val}]"
         
         return True, "Valid"
     
-    @staticmethod
-    def check_alerts(reading: SensorReading) -> Optional[Dict[str, Any]]:
-        """Check if reading triggers any alerts"""
+    def check_alerts(self, reading: SensorReading) -> Optional[Dict[str, Any]]:
+        """
+        Check if reading triggers any alerts based on configuration thresholds
+        
+        Args:
+            reading: SensorReading object to check
+        
+        Returns:
+            Alert dictionary if alert triggered, None otherwise
+        """
         sensor_type = reading.sensor_type
         
-        if sensor_type not in DataValidator.ALERT_THRESHOLDS:
+        # Get alert thresholds from configuration
+        thresholds = self.config.get_alert_thresholds(sensor_type)
+        
+        if not thresholds:
             return None
         
-        thresholds = DataValidator.ALERT_THRESHOLDS[sensor_type]
-        
-        # For displacement
+        # For displacement: check total displacement
         if sensor_type == "displacement":
             value = reading.data.get("total", 0)
             if value >= thresholds["critical"]:
@@ -134,7 +111,7 @@ class DataValidator:
                     "threshold": thresholds["warning"]
                 }
         
-        # For vibration
+        # For vibration: check peak value
         elif sensor_type == "vibration":
             value = reading.data.get("peak_value", 0)
             if value >= thresholds["critical"]:
@@ -152,7 +129,7 @@ class DataValidator:
                     "threshold": thresholds["warning"]
                 }
         
-        # For rainfall
+        # For rainfall: check intensity
         elif sensor_type == "rainfall":
             value = reading.data.get("intensity", 0)
             if value >= thresholds["critical"]:
@@ -193,6 +170,10 @@ class SensorDataSubscriber:
         self.project_id = project_id
         self.username = username
         self.password = password
+        
+        # Initialize configuration manager and validator
+        self.config = get_config_manager()
+        self.validator = DataValidator(self.config)
         
         # Initialize database
         self.db = SensorDatabase()
@@ -285,8 +266,8 @@ class SensorDataSubscriber:
                 checksum=payload.get("checksum")
             )
             
-            # Validate
-            is_valid, message = DataValidator.validate_reading(reading)
+            # Validate using configuration-driven validator
+            is_valid, message = self.validator.validate_reading(reading)
             
             if not is_valid:
                 print(f"✗ Invalid reading from {reading.device_id}: {message}")
@@ -329,8 +310,8 @@ class SensorDataSubscriber:
             self.device_data[reading.device_id][reading.sensor_type] = reading
             self.stats["valid_messages"] += 1
             
-            # Check for alerts
-            alert = DataValidator.check_alerts(reading)
+            # Check for alerts using configuration-driven thresholds
+            alert = self.validator.check_alerts(reading)
             if alert:
                 self._trigger_alert(reading, alert)
             

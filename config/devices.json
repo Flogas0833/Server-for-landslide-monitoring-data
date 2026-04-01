@@ -1,0 +1,40 @@
+{
+    "devices": [
+        {
+            "device_id": "DEVICE001",
+            "site_id": "SITE01",
+            "project_id": "PRJ001",
+            "name": "Sensor 1",
+            "description": "Landslide monitoring sensor at Site 1",
+            "sensor_types": [
+                "tilt",
+                "vibration",
+                "displacement",
+                "rainfall",
+                "temperature",
+                "gnss"
+            ],
+            "base_lat": 20.9603,
+            "base_lon": 107.0658,
+            "base_alt": 500.0
+        },
+        {
+            "device_id": "DEVICE002",
+            "site_id": "SITE02",
+            "project_id": "PRJ001",
+            "name": "Sensor 2",
+            "description": "Landslide monitoring sensor at Site 2",
+            "sensor_types": [
+                "tilt",
+                "vibration",
+                "displacement",
+                "rainfall",
+                "temperature",
+                "gnss"
+            ],
+            "base_lat": 20.0280,
+            "base_lon": 105.8545,
+            "base_alt": 300.0
+        }
+    ]
+}

@@ -1,0 +1,133 @@
+{
+    "sensors": [
+        {
+            "sensor_type": "tilt",
+            "unit": "degrees",
+            "description": "Tilt measurement sensor for detecting slope movement",
+            "valid_ranges": {
+                "roll": [
+                    -30,
+                    30
+                ],
+                "pitch": [
+                    -30,
+                    30
+                ]
+            },
+            "alert_thresholds": null
+        },
+        {
+            "sensor_type": "vibration",
+            "unit": "g (gravity)",
+            "description": "Vibration sensor for detecting seismic activity and ground movement",
+            "valid_ranges": {
+                "frequency": [
+                    0,
+                    100
+                ],
+                "amplitude_x": [
+                    0,
+                    5
+                ],
+                "amplitude_y": [
+                    0,
+                    5
+                ],
+                "amplitude_z": [
+                    0.5,
+                    5.0
+                ]
+            },
+            "alert_thresholds": {
+                "warning": 0.8,
+                "critical": 1.5
+            }
+        },
+        {
+            "sensor_type": "displacement",
+            "unit": "mm",
+            "description": "Displacement sensor for measuring ground deformation",
+            "valid_ranges": {
+                "horizontal": [
+                    0,
+                    500
+                ],
+                "vertical": [
+                    0,
+                    500
+                ],
+                "total": [
+                    0,
+                    500
+                ],
+                "cumulative": [
+                    0,
+                    10000
+                ]
+            },
+            "alert_thresholds": {
+                "warning": 5.0,
+                "critical": 8.0
+            }
+        },
+        {
+            "sensor_type": "rainfall",
+            "unit": "mm",
+            "description": "Rainfall sensor for monitoring precipitation",
+            "valid_ranges": {
+                "intensity": [
+                    0,
+                    200
+                ],
+                "cumulative_1h": [
+                    0,
+                    500
+                ],
+                "cumulative_24h": [
+                    0,
+                    1000
+                ]
+            },
+            "alert_thresholds": {
+                "warning": 30,
+                "critical": 100
+            }
+        },
+        {
+            "sensor_type": "temperature",
+            "unit": "°C",
+            "description": "Temperature and humidity sensor",
+            "valid_ranges": {
+                "current": [
+                    -20,
+                    60
+                ],
+                "humidity": [
+                    0,
+                    100
+                ]
+            },
+            "alert_thresholds": null
+        },
+        {
+            "sensor_type": "gnss",
+            "unit": "degrees/meters",
+            "description": "GNSS/GPS positioning sensor",
+            "valid_ranges": {
+                "latitude": [
+                    -90,
+                    90
+                ],
+                "longitude": [
+                    -180,
+                    180
+                ],
+                "altitude": [
+                    -500,
+                    10000
+                ]
+            },
+            "alert_thresholds": null
+        }
+    ]
+}

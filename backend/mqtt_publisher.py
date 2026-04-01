@@ -404,43 +404,49 @@ class SensorPublisher:
 
 if __name__ == "__main__":
     import threading
+    import sys
+    import os
     
-    # Configuration
+    # Add backend directory to path for imports
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    
+    from config_manager import get_config_manager
+    
+    # Load configuration
+    config_manager = get_config_manager()
+    
+    # MQTT Configuration
     MQTT_BROKER = "localhost"
     MQTT_PORT = 1883
-    PROJECT_ID = "PRJ001"
     
-    # Device 1 Configuration
-    DEVICE_1 = {
-        "device_id": "DEVICE001",
-        "site_id": "SITE01",
-        "name": "Sensor 1",
-        "base_lat": 20.9603, 
-        "base_lon": 107.0658
-    }
+    # Get all devices from configuration
+    devices = config_manager.get_all_devices()
     
-    # Device 2 Configuration
-    DEVICE_2 = {
-        "device_id": "DEVICE002",
-        "site_id": "SITE02",
-        "name": "Sensor 2",
-        "base_lat": 20.0280, 
-        "base_lon": 105.8545
-    }
+    if not devices:
+        print("\n[ERROR] No devices configured. Please add devices to config/devices.json")
+        sys.exit(1)
+    
+    # Get project_id from first device (assuming all devices share same project)
+    PROJECT_ID = devices[0].project_id
     
     def run_device(device_config):
-        """Run a single device publisher in a separate thread"""
+        """
+        Run a single device publisher in a separate thread
+        
+        Args:
+            device_config: DeviceConfig object with device information
+        """
         publisher = SensorPublisher(
             broker_host=MQTT_BROKER,
             broker_port=MQTT_PORT,
-            device_id=device_config["device_id"],
-            project_id=PROJECT_ID,
-            site_id=device_config["site_id"]
+            device_id=device_config.device_id,
+            project_id=device_config.project_id,
+            site_id=device_config.site_id
         )
         
         # Store base coordinates for this publisher
-        publisher.base_lat = device_config["base_lat"]
-        publisher.base_lon = device_config["base_lon"]
+        publisher.base_lat = device_config.base_lat
+        publisher.base_lon = device_config.base_lon
         
         # Connect and simulate
         publisher.connect()
@@ -455,11 +461,12 @@ if __name__ == "__main__":
         publisher.publish_gnss = publish_gnss_with_offset
         
         # For DEVICE002: Override vibration to send abnormal data (critical alert)
-        if device_config["device_id"] == "DEVICE002":
+        # This allows testing alert functionality
+        if device_config.device_id == "DEVICE002":
             original_publish_vibration = publisher.publish_vibration
             def publish_abnormal_vibration(**kwargs):
                 # Send HIGH vibration to trigger CRITICAL alert (threshold is 1.5g)
-                print(f"\n🚨 {device_config['device_id']} - SENDING ABNORMAL VIBRATION DATA")
+                print(f"\n🚨 {device_config.device_id} - SENDING ABNORMAL VIBRATION DATA")
                 original_publish_vibration(
                     frequency=random.uniform(5, 8),
                     amplitude_x=random.uniform(1.8, 2.2),  # HIGH - exceeds 1.5g critical threshold
@@ -469,24 +476,32 @@ if __name__ == "__main__":
             publisher.publish_vibration = publish_abnormal_vibration
         
         # Run simulation (indefinite, measurement every 15 seconds)
-        print(f"\n📍 Starting {device_config['name']} ({device_config['device_id']})")
+        print(f"\n📍 Starting {device_config.name} ({device_config.device_id})")
+        print(f"   Site: {device_config.site_id}")
         print(f"   Location: ({publisher.base_lat:.4f}, {publisher.base_lon:.4f})")
-        if device_config["device_id"] == "DEVICE002":
-            print(f"   ⚠️  STATUS: ABNORMAL (High Vibration)")
+        print(f"   Sensors: {', '.join(device_config.sensor_types)}")
+        if device_config.device_id == "DEVICE002":
+            print(f"   ⚠️  STATUS: ABNORMAL (High Vibration for testing)")
         print()
         publisher.simulate_measurements(duration_seconds=None, interval_seconds=15)
     
-    # Start both devices in separate threads
+    # Start devices in separate threads
     print("\n" + "="*70)
-    print("🚀 MQTT PUBLISHER - 2 DEVICE SIMULATOR")
+    print(f"🚀 MQTT PUBLISHER - {len(devices)} DEVICE SIMULATOR(S)")
+    print("="*70)
+    print(f"Project: {PROJECT_ID}")
+    print(f"Broker: {MQTT_BROKER}:{MQTT_PORT}")
     print("="*70)
     
-    thread1 = threading.Thread(target=run_device, args=(DEVICE_1,), daemon=True)
-    thread2 = threading.Thread(target=run_device, args=(DEVICE_2,), daemon=True)
-    
-    thread1.start()
-    time.sleep(2)  # Stagger the start
-    thread2.start()
+    threads = []
+    for idx, device in enumerate(devices):
+        thread = threading.Thread(target=run_device, args=(device,), daemon=True)
+        threads.append(thread)
+        thread.start()
+        
+        # Stagger the start of devices
+        if idx < len(devices) - 1:
+            time.sleep(2)
     
     # Keep main thread alive
     try:
