@@ -331,9 +331,16 @@ class SensorDataSubscriber:
         device_id = payload.get("device_id")
         self.device_status[device_id] = payload
         
+        # Only register device if it's configured in the system
+        device_config = self.config.get_device(device_id)
+        if not device_config:
+            print(f"[WARNING] Received status from unconfigured device: {device_id}")
+            print(f"          To add this device, update config/devices.json")
+            return
+        
         # Register device in database if not already registered
-        project_id = payload.get("project_id", self.project_id)
-        site_id = payload.get("site_id", "default")
+        project_id = payload.get("project_id", device_config.project_id)
+        site_id = payload.get("site_id", device_config.site_id)
         
         self.db.register_device(
             device_id=device_id,
@@ -341,7 +348,7 @@ class SensorDataSubscriber:
             site_id=site_id,
             latitude=payload.get("latitude", 0),
             longitude=payload.get("longitude", 0),
-            name=payload.get("device_name", device_id)
+            name=payload.get("device_name", device_config.name)
         )
         
         print(f"[STATUS] {device_id}: " +
