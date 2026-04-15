@@ -159,15 +159,15 @@ Tổng dịch chuyển từ lúc bắt đầu giám sát đến hiện tại
 
 ```
 Tích lũy (mm):
-┌────────────┬──────────────┬────────────────────────┐
-│ Mức Nguy   │ Cumulative   │ Ý Nghĩa                │
-├────────────┼──────────────┼────────────────────────┤
-│ NORMAL     │ 0-20mm       │ Chuyển động rất nhỏ    │
-│ LOW        │ 20-50mm      │ Cảnh báo đầu tiên      │
-│ MEDIUM     │ 50-100mm     │ Cần theo dõi sát       │
-│ HIGH       │ 100-200mm    │ Sạt lở có thể ~3-7 ngày│
-│ CRITICAL   │ > 200mm      │ Cảnh báo sạt lở tối cấp│
-└────────────┴──────────────┴────────────────────────┘
+┌───────────────┬──────────────┬────────────────────────┐
+│ Mức Nguy Hiểm │ Cumulative   │ Ý Nghĩa                │
+├───────────────┼──────────────┼────────────────────────┤
+│ NORMAL        │ 0-20mm       │ Chuyển động rất nhỏ    │
+│ LOW           │ 20-50mm      │ Cảnh báo đầu tiên      │
+│ MEDIUM        │ 50-100mm     │ Cần theo dõi sát       │
+│ HIGH          │ 100-200mm    │ Sạt lở có thể ~3-7 ngày│
+│ CRITICAL      │ > 200mm      │ Cảnh báo sạt lở tối cấp│
+└───────────────┴──────────────┴────────────────────────┘
 ```
 
 **Ghi chú Việt Nam:**
@@ -196,15 +196,15 @@ mm/ngày:
 
 ```
 Roll/Pitch (độ):
-┌─────────────┬──────────┬──────────────────────────┐
-│ Mức Nguy    │ Góc (°)  │ Ý Nghĩa                  │
-├─────────────┼──────────┼──────────────────────────┤
-│ NORMAL      │ < 1.0°   │ Bình thường              │
-│ LOW         │ 1-2°     │ Cần theo dõi             │
-│ MEDIUM      │ 2-5°     │ Cảnh báo, sFrancesco sạt │
-│ HIGH        │ 5-10°    │ Nguy hiểm cao            │
-│ CRITICAL    │ > 15°    │ Sạt lở rất gần           │
-└─────────────┴──────────┴──────────────────────────┘
+┌───────────────┬──────────┬──────────────────────────┐
+│ Mức Nguy Hiểm │ Góc (°)  │ Ý Nghĩa                  │
+├───────────────┼──────────┼──────────────────────────┤
+│ NORMAL        │ < 1.0°   │ Bình thường              │
+│ LOW           │ 1-2°     │ Cần theo dõi             │
+│ MEDIUM        │ 2-5°     │ Cảnh báo, sFrancesco sạt │
+│ HIGH          │ 5-10°    │ Nguy hiểm cao            │
+│ CRITICAL      │ > 15°    │ Sạt lở rất gần           │
+└───────────────┴──────────┴──────────────────────────┘
 ```
 
 **Nguồn:**
@@ -235,15 +235,15 @@ Phát hiện rung động từ động đất, khoảng cách giao thông, hoặ
 
 ```
 Amplitude (G = 9.81 m/s²):
-┌─────────────┬──────────┬──────────────────────┐
-│ Mức Nguy    │ Biên độ  │ Ý Nghĩa              │
-├─────────────┼──────────┼──────────────────────┤
-│ NORMAL      │ < 0.1G   │ Bình thường          │
-│ LOW         │ 0.1-0.2G │ Cần theo dõi         │
-│ MEDIUM      │ 0.2-0.5G │ Cảnh báo, rung động  │
-│ HIGH        │ 0.5-1.0G │ Rung mạnh, giao thông│
-│ CRITICAL    │ > 2.0G   │ Động đất hoặc sạt lở │
-└─────────────┴──────────┴──────────────────────┘
+┌───────────────┬──────────┬──────────────────────┐
+│ Mức Nguy Hiểm │ Biên độ  │ Ý Nghĩa              │
+├───────────────┼──────────┼──────────────────────┤
+│ NORMAL        │ < 0.1G   │ Bình thường          │
+│ LOW           │ 0.1-0.2G │ Cần theo dõi         │
+│ MEDIUM        │ 0.2-0.5G │ Cảnh báo, rung động  │
+│ HIGH          │ 0.5-1.0G │ Rung mạnh, giao thông│
+│ CRITICAL      │ > 2.0G   │ Động đất hoặc sạt lở │
+└───────────────┴──────────┴──────────────────────┘
 ```
 
 **Nguồn:**
@@ -315,16 +315,16 @@ Sau bao lâu sạt lở xảy ra sau mưa vừa?
 
 **Phạm vi hoạt động cảm biến:**
 ```
-┌──────────────┬──────────┬──────────────────┐
-│ Mức Nguy     │ Nhiệt độ │ Ý Nghĩa          │
-├──────────────┼──────────┼──────────────────┤
-│ CRITICAL     │ < -20°C  │ Cảm biến bị hỏng  │
-│ HIGH         │ -20-0°C  │ Hiệu suất giảm    │
-│ NORMAL       │ 0-40°C   │ Hoạt động tốt     │
-│ MEDIUM       │ 40-50°C  │ Canh báo          │
-│ HIGH         │ 50-60°C  │ Nguy hiểm         │
-│ CRITICAL     │ > 60°C   │ Cảm biến hỏng      │
-└──────────────┴──────────┴──────────────────┘
+┌───────────────┬──────────┬──────────────────┐
+│ Mức Nguy Hiểm │ Nhiệt độ │ Ý Nghĩa          │
+├───────────────┼──────────┼──────────────────┤
+│ CRITICAL      │ < -20°C  │ Cảm biến bị hỏng │
+│ HIGH          │ -20-0°C  │ Hiệu suất giảm   │
+│ NORMAL        │ 0-40°C   │ Hoạt động tốt    │
+│ MEDIUM        │ 40-50°C  │ Canh báo         │
+│ HIGH          │ 50-60°C  │ Nguy hiểm        │
+│ CRITICAL      │ > 60°C   │ Cảm biến hỏng    │
+└───────────────┴──────────┴──────────────────┘
 ```
 
 **Độ ẩm (%):**
@@ -447,135 +447,3 @@ Hệ thống hiện tại sử dụng **5 mức cảnh báo**:
 ```
 
 ---
-
-## <a name="điều-chỉnh"></a>7️⃣ Hướng Dẫn Điều Chỉnh Ngưỡng
-
-### **Khi Nào Điều Chỉnh?**
-
-Bạn nên điều chỉnh ngưỡng khi:
-- ✅ Có sạt lở xảy ra nhưng hệ thống không cảnh báo
-- ✅ Cảnh báo nhiều lần nhưng không xảy ra sạt lở (nhạy cảnh báo quá)
-- ✅ Sự thay đổi khí hậu, độ dốc, chất liệu địa phương
-
-### **Quy Trình Điều Chỉnh**
-
-#### **Bước 1: Thu Thập Dữ Liệu Lịch Sử**
-```
-Ghi lại:
-├─ Ngày sạt lở xảy ra
-├─ Displacement 24h trước sạt lở
-├─ Tilt thay đổi
-├─ Tổng lượng mưa
-├─ Vị trí sạt lở
-└─ Loại sạt lở
-```
-
-#### **Bước 2: Phân Tích**
-```
-Ví dụ: Sạt lở xảy ra hôm 15/5/2010 tại Võ Nhai:
-├─ Displacement: 150mm (cumulative 5 ngày)
-├─ Mưa 48h: 380mm
-├─ Tilt: 8.5°
-└─ Học kinh nghiệm: high displacement + mưa lớn → CRITICAL
-```
-
-#### **Bước 3: Cập Nhật Thresholds**
-```bash
-# API request
-POST /api/alerts/thresholds
-{
-  "sensor_type": "displacement",
-  "threshold_name": "cumulative_high",
-  "value": 120  # Nâng từ 100 lên 120mm dựa kinh nghiệm
-}
-```
-
-#### **Bước 4: Kiểm Nghiệm**
-```
-├─ Test với dữ liệu lịch sử
-├─ Xem có phát hiện được sạt lở trước 24-48h không
-├─ Đánh giá độ chính xác (Precision, Recall)
-└─ So sánh với hệ thống khác
-```
-
-### **Công Thức Điều Chỉnh**
-
-**Tổng Displacement Trước Sạt:**
-```
-Cumulative Threshold = 60-70% × Displacement tại sạt lở
-
-Ví dụ:
-├─ Nếu sạt lở tại 180mm
-├─ Threshold HIGH = 0.6-0.7 × 180 = 108-126mm
-└─ Chọn: 110mm (để cảnh báo sớm 1-2 ngày)
-```
-
-**Mưa Ngưỡng:**
-```
-Rainfall Threshold = 70-80% × Mưa max 24h gây sạt
-
-Ví dụ:
-├─ Mưa max gây sạt: 380mm/24h
-├─ Threshold CRITICAL = 0.7-0.8 × 380 = 266-304mm
-└─ Chọn: 300mm
-```
-
----
-
-## 📊 Bảng So Sánh Tiêu Chuẩn
-
-### **DISPLACEMENT - So Sánh Giữa Các Tiêu Chuẩn**
-
-```
-┌──────────────┬─────────┬─────────┬──────────┬──────────┐
-│ Mức Nguy     │ USGS    │ JGS     │ Việt Nam │ Hệ Thống │
-├──────────────┼─────────┼─────────┼──────────┼──────────┤
-│ NORMAL       │ < 5mm   │ < 5mm   │ < 20mm   │ < 20mm   │
-│ LOW          │ 5-10mm  │ 5-10mm  │ 20-50mm  │ 20-50mm  │
-│ MEDIUM       │ 10-20mm │ 10-20mm │ 50-100mm │ 50-100mm │
-│ HIGH         │ > 20mm  │ > 20mm  │ 100-200mm│ 100-200mm│
-│ CRITICAL     │ Sạt     │ Sạt     │ > 200mm  │ > 200mm  │
-└──────────────┴─────────┴─────────┴──────────┴──────────┘
-```
-
----
-
-## 🎯 Tóm Tắt Áp Dụng
-
-### **Ngưỡng Cảnh Báo Tối Ưu (Recommended)**
-
-Dựa trên kết hợp:
-- USGS (tiêu chuẩn quốc tế)
-- JGS (kinh nghiệm Nhật Bản - tương tự Việt Nam)
-- Thông Tư 06/2015/TT-BXD (tiêu chuẩn Việt Nam)
-- Kinh nghiệm sạt lở 2010-2015 tại Việt Nam
-
-| Cảm Biến | LOW | MEDIUM | HIGH | CRITICAL |
-|----------|-----|--------|------|----------|
-| **Displacement** | 20mm | 50mm | 100mm | 200mm |
-| **Tilt** | 2.0° | 5.0° | 10.0° | 15.0° |
-| **Rainfall 1h** | 10mm | 25mm | 50mm | 100mm |
-| **Rainfall 24h** | 100mm | 250mm | 400mm | 500mm |
-| **Vibration** | 0.2G | 0.5G | 1.0G | 2.0G |
-
----
-
-## 📝 Ghi Chú Quan Trọng
-
-> ⚠️ **Lưu ý:** Các ngưỡng này là **khuyến nghị chung**. Bạn PHẢI điều chỉnh theo:
-> - **Vị trí cụ thể** (từng sườn dốc khác nhau)
-> - **Lịch sử sạt lở địa phương**
-> - **Điều kiện địa chất, khí hậu**
-> - **Dữ liệu thực tế** từ hệ thống giám sát
-
-> 🔴 **Nếu chưa có dữ liệu lịch sử:**
-> - Sử dụng ngưỡng khuyến nghị này
-> - Theo dõi và ghi nhật ký mỗi sự kiện
-> - Điều chỉnh dần hàng tháng theo thực tế
-
----
-
-**Phiên bản:** 1.0  
-**Cập nhật lần cuối:** April 15, 2026  
-**Tác giả:** Landslide Monitoring System Team  
-**Email:** support@landslide-monitoring.vn
