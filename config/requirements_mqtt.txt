@@ -1,4 +1,13 @@
+# Core MQTT & Communication
 paho-mqtt==1.6.1
-python-dotenv==0.19.0
+
+# Web Framework
 flask==2.3.0
 flask-cors==4.0.0
+
+# Environment Configuration
+python-dotenv==0.19.0
+
+# Optional but recommended:
+# werkzeug==2.3.0     # WSGI utility library
+# jinja2==3.1.2       # Template engine

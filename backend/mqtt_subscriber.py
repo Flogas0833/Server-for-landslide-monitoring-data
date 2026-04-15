@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from database import SensorDatabase
 from config_manager import get_config_manager
+from alert_manager import AlertManager, DangerLevel
 
 @dataclass
 class SensorReading:
@@ -178,6 +179,9 @@ class SensorDataSubscriber:
         # Initialize database
         self.db = SensorDatabase()
         
+        # Initialize alert manager
+        self.alert_manager = AlertManager()
+        
         # Initialize MQTT client
         self.client = mqtt.Client(client_id=f"server_{project_id}")
         self.client.on_connect = self._on_connect
@@ -314,6 +318,31 @@ class SensorDataSubscriber:
             alert = self.validator.check_alerts(reading)
             if alert:
                 self._trigger_alert(reading, alert)
+            
+            # Check for alerts using AlertManager (new system)
+            alert_result = self.alert_manager.check_sensor(
+                reading.device_id,
+                reading.sensor_type,
+                reading.data
+            )
+            if alert_result:
+                danger_level, message, value = alert_result
+                if danger_level.value != 'normal':
+                    # Create alert in database
+                    self.alert_manager.create_alert(
+                        device_id=reading.device_id,
+                        sensor_type=reading.sensor_type,
+                        danger_level=danger_level,
+                        message=message,
+                        value=value,
+                        threshold=0
+                    )
+                    print(f"🚨 ALERT [{danger_level.value.upper()}] {reading.device_id}: {message}")
+                    self.stats["alerts_triggered"] += 1
+                    
+                    # Trigger callback if exists
+                    if self.on_alert:
+                        self.on_alert(reading.device_id, danger_level, message)
             
             # Display
             self._display_sensor_data(reading)

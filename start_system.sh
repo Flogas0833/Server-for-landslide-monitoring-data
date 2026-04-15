@@ -12,10 +12,18 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 DATABASE_DIR="$SCRIPT_DIR/database"
+VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
+
+# Check if venv Python exists, otherwise use system python3
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "⚠️  Virtual environment not found. Using system python3..."
+    VENV_PYTHON="python3"
+fi
 
 echo "============================================================================"
 echo "🚀 LANDSLIDE MONITORING SYSTEM - STARTUP"
 echo "============================================================================"
+echo "Python: $VENV_PYTHON"
 echo ""
 
 # Color codes
@@ -65,15 +73,15 @@ echo -e "${YELLOW}[4/5]${NC} Starting backend services..."
 cd "$BACKEND_DIR"
 
 echo "  • Starting MQTT Subscriber..."
-python3 mqtt_subscriber.py > /tmp/subscriber.log 2>&1 &
+$VENV_PYTHON mqtt_subscriber.py > /tmp/subscriber.log 2>&1 &
 sleep 2
 
 echo "  • Starting MQTT Publisher (sensor simulator)..."
-python3 mqtt_publisher.py > /tmp/publisher.log 2>&1 &
+$VENV_PYTHON mqtt_publisher.py > /tmp/publisher.log 2>&1 &
 sleep 2
 
 echo "  • Starting Web Server..."
-python3 web_server.py > /tmp/webserver.log 2>&1 &
+$VENV_PYTHON web_server.py > /tmp/webserver.log 2>&1 &
 sleep 5
 
 echo -e "${GREEN}✓${NC} All backend services started"
@@ -82,21 +90,35 @@ echo ""
 # Step 5: Verify services
 echo -e "${YELLOW}[5/5]${NC} Verifying services..."
 SERVICES_OK=true
+MAX_RETRIES=10
+RETRY_COUNT=0
 
 # Check if web server is responding
-if timeout 2 curl -s http://localhost:5000/ > /dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} Web Server responding on http://localhost:5000"
-else
-    echo -e "${RED}✗${NC} Web Server not responding"
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if timeout 2 curl -s http://localhost:5000/api/health > /dev/null 2>&1; then
+        echo -e "${GREEN}✓${NC} Web Server responding on http://localhost:5000"
+        break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+        echo "  ⏳ Waiting for web server... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+        sleep 1
+    fi
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo -e "${RED}✗${NC} Web Server not responding after $MAX_RETRIES attempts"
     SERVICES_OK=false
 fi
 
 # Check API endpoint
-if timeout 2 curl -s http://localhost:5000/api/devices > /dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} API endpoint responding"
-else
-    echo -e "${RED}✗${NC} API endpoint not responding"
-    SERVICES_OK=false
+if [ "$SERVICES_OK" = true ]; then
+    if timeout 2 curl -s http://localhost:5000/api/devices > /dev/null 2>&1; then
+        echo -e "${GREEN}✓${NC} API endpoint responding"
+    else
+        echo -e "${RED}✗${NC} API endpoint not responding"
+        SERVICES_OK=false
+    fi
 fi
 
 echo ""

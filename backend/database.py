@@ -253,3 +253,128 @@ class SensorDatabase:
             r['data'] = json.loads(r['data'])
         
         return results
+    
+    def get_readings_with_filters(self, sensor_type: Optional[str] = None, device_id: Optional[str] = None,
+                                  start_date: Optional[str] = None, end_date: Optional[str] = None,
+                                  limit: int = 100, offset: int = 0) -> Dict[str, Any]:
+        """
+        Get sensor readings with filtering and pagination
+        
+        Args:
+            sensor_type: Filter by sensor type (optional)
+            device_id: Filter by device ID (optional)
+            start_date: ISO format start date (optional)
+            end_date: ISO format end date (optional)
+            limit: Number of records per page
+            offset: Pagination offset
+        
+        Returns:
+            Dictionary with data and metadata
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        # Build WHERE clause
+        conditions = []
+        params = []
+        
+        if sensor_type:
+            conditions.append("sensor_type = ?")
+            params.append(sensor_type)
+        
+        if device_id:
+            conditions.append("device_id = ?")
+            params.append(device_id)
+        
+        if start_date:
+            conditions.append("timestamp >= ?")
+            params.append(start_date)
+        
+        if end_date:
+            conditions.append("timestamp <= ?")
+            params.append(end_date)
+        
+        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        
+        # Get total count
+        count_query = f"SELECT COUNT(*) as total FROM sensor_readings {where_clause}"
+        cursor.execute(count_query, params)
+        total = cursor.fetchone()['total']
+        
+        # Get paginated results
+        query = f"""
+            SELECT device_id, sensor_type, timestamp, data, unit, quality, quality as quality_score
+            FROM sensor_readings
+            {where_clause}
+            ORDER BY timestamp DESC
+            LIMIT ? OFFSET ?
+        """
+        params.extend([limit, offset])
+        cursor.execute(query, params)
+        
+        results = [dict(row) for row in cursor.fetchall()]
+        
+        for r in results:
+            r['data'] = json.loads(r['data'])
+        
+        conn.close()
+        
+        return {
+            'data': results,
+            'pagination': {
+                'total': total,
+                'limit': limit,
+                'offset': offset,
+                'page': (offset // limit) + 1 if limit > 0 else 1,
+                'total_pages': (total + limit - 1) // limit if limit > 0 else 1
+            }
+        }
+    
+    def get_all_readings_for_export(self, sensor_type: Optional[str] = None, 
+                                    device_id: Optional[str] = None,
+                                    start_date: Optional[str] = None, 
+                                    end_date: Optional[str] = None) -> List[Dict]:
+        """
+        Get all sensor readings matching filters (for export/reporting)
+        No pagination - returns all matching records
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        conditions = []
+        params = []
+        
+        if sensor_type:
+            conditions.append("sensor_type = ?")
+            params.append(sensor_type)
+        
+        if device_id:
+            conditions.append("device_id = ?")
+            params.append(device_id)
+        
+        if start_date:
+            conditions.append("timestamp >= ?")
+            params.append(start_date)
+        
+        if end_date:
+            conditions.append("timestamp <= ?")
+            params.append(end_date)
+        
+        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        
+        query = f"""
+            SELECT device_id, sensor_type, timestamp, data, unit, quality, created_at
+            FROM sensor_readings
+            {where_clause}
+            ORDER BY timestamp DESC
+        """
+        
+        cursor.execute(query, params)
+        results = [dict(row) for row in cursor.fetchall()]
+        
+        for r in results:
+            r['data'] = json.loads(r['data'])
+        
+        conn.close()
+        
+        return results
