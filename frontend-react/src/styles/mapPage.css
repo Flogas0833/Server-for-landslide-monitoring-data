@@ -1,0 +1,131 @@
+/* Map Page */
+.map-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.header-info {
+    margin-top: 8px;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.map-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 12px;
+    flex: 1;
+    padding: 12px;
+    overflow: hidden;
+}
+
+.side-panel-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    min-width: 0;
+}
+
+.device-detail-panel {
+    background-color: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.device-detail-panel h3 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 8px;
+}
+
+.detail-content p {
+    margin: 8px 0;
+    font-size: 14px;
+    color: #555;
+}
+
+.detail-content strong {
+    color: #333;
+}
+
+.readings-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+}
+
+.readings-section h4 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.reading {
+    padding: 8px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    margin: 4px 0;
+    font-size: 13px;
+    color: #555;
+}
+
+.header-controls {
+    margin-top: 12px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .map-layout {
+        grid-template-columns: 1fr 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .map-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .side-panel-container {
+        max-height: 300px;
+    }
+
+    .page-header h1 {
+        font-size: 18px;
+    }
+}

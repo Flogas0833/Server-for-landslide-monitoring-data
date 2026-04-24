@@ -1,0 +1,137 @@
+/* Alert Panel */
+.alert-panel,
+.alert-panel-empty {
+    background-color: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 16px;
+}
+
+.alert-panel-empty {
+    text-align: center;
+    color: #27ae60;
+    font-weight: 500;
+}
+
+.alert-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #eee;
+}
+
+.alert-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 12px;
+    border-left: 4px solid #999;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.alert-item.alert-critical {
+    border-left-color: #e74c3c;
+    background-color: #fadbd8;
+}
+
+.alert-item.alert-high {
+    border-left-color: #e67e22;
+    background-color: #fdebd0;
+}
+
+.alert-item.alert-medium {
+    border-left-color: #f39c12;
+    background-color: #fef5e7;
+}
+
+.alert-item.alert-low {
+    border-left-color: #3498db;
+    background-color: #ebf5fb;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-icon {
+    margin-right: 8px;
+}
+
+.alert-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.alert-message {
+    font-size: 14px;
+    color: #555;
+    margin: 4px 0 8px 0;
+}
+
+.alert-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 12px;
+    color: #666;
+    margin-top: 8px;
+}
+
+.alert-details span {
+    word-break: break-word;
+}
+
+.btn-acknowledge {
+    padding: 6px 12px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+    margin-left: 8px;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-acknowledge:hover {
+    background-color: #2980b9;
+}
+
+/* Scrollbar styling */
+.alert-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.alert-list::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+}
+
+.alert-list::-webkit-scrollbar-thumb {
+    background-color: #bbb;
+    border-radius: 3px;
+}
+
+.alert-list::-webkit-scrollbar-thumb:hover {
+    background-color: #999;
+}

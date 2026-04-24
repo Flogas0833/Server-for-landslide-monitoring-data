@@ -43,13 +43,27 @@ check_port() {
 }
 
 # Step 1: Ensure database directory exists
-echo -e "${YELLOW}[1/5]${NC} Preparing database directory..."
+echo -e "${YELLOW}[1/6]${NC} Preparing database directory..."
 mkdir -p "$DATABASE_DIR"
 echo -e "${GREEN}✓${NC} Database directory ready"
 echo ""
 
-# Step 2: Kill any existing processes
-echo -e "${YELLOW}[2/5]${NC} Cleaning up any existing processes..."
+# Step 2: Start React frontend 
+echo -e "${YELLOW}[2/6]${NC} Starting React frontend..."
+cd "$SCRIPT_DIR/frontend-react"
+if [ -f "package.json" ]; then
+    echo "  • Starting dev server on http://localhost:5173..."
+    npm run dev > /tmp/frontend.log 2>&1 &
+    FRONTEND_PID=$!
+    sleep 3
+    echo -e "${GREEN}✓${NC} React frontend started"
+else
+    echo -e "${YELLOW}⚠${NC} React project not found, using HTML CSS frontend"
+fi
+echo ""
+
+# Step 3: Kill any existing processes
+echo -e "${YELLOW}[3/6]${NC} Cleaning up any existing processes..."
 pkill -f "mqtt_subscriber.py" 2>/dev/null || true
 pkill -f "mqtt_publisher.py" 2>/dev/null || true
 pkill -f "web_server.py" 2>/dev/null || true
@@ -57,8 +71,8 @@ sleep 2
 echo -e "${GREEN}✓${NC} Cleanup complete"
 echo ""
 
-# Step 3: Start MQTT Broker
-echo -e "${YELLOW}[3/5]${NC} Starting MQTT Broker..."
+# Step 4: Start MQTT Broker
+echo -e "${YELLOW}[4/6]${NC} Starting MQTT Broker..."
 if sudo systemctl is-active --quiet mosquitto; then
     echo -e "${GREEN}✓${NC} MQTT Broker already running"
 else
@@ -68,8 +82,8 @@ else
 fi
 echo ""
 
-# Step 4: Start backend services
-echo -e "${YELLOW}[4/5]${NC} Starting backend services..."
+# Step 5: Start backend services
+echo -e "${YELLOW}[5/6]${NC} Starting backend services..."
 cd "$BACKEND_DIR"
 
 echo "  • Starting MQTT Subscriber..."
@@ -87,8 +101,8 @@ sleep 5
 echo -e "${GREEN}✓${NC} All backend services started"
 echo ""
 
-# Step 5: Verify services
-echo -e "${YELLOW}[5/5]${NC} Verifying services..."
+# Step 6: Verify services
+echo -e "${YELLOW}[6/6]${NC} Verifying services..."
 SERVICES_OK=true
 MAX_RETRIES=10
 RETRY_COUNT=0
@@ -126,6 +140,13 @@ if [ "$SERVICES_OK" = true ]; then
     echo "============================================================================"
     echo -e "${GREEN}✓ SYSTEM READY${NC}"
     echo "============================================================================"
+    echo ""
+    echo -e "🎨 ${YELLOW}USING FRONTEND${NC}"
+    if [ -d "$SCRIPT_DIR/frontend-react/dist" ]; then
+        echo "   React + TanStack (Modern)"
+    else
+        echo "   Vanilla JavaScript (Legacy)"
+    fi
     echo ""
     echo -e "📍 ${YELLOW}INTERACTIVE MAP${NC}"
     echo "   http://localhost:5000/"

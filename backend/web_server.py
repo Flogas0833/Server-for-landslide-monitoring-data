@@ -3,7 +3,7 @@ Web Server - Flask API for sensor data and OpenStreetMap visualization
 Provides REST endpoints and serves the interactive map frontend
 """
 
-from flask import Flask, render_template, jsonify, request, Response
+from flask import Flask, render_template, jsonify, request, Response, send_from_directory
 from flask_cors import CORS
 from database import SensorDatabase
 from alert_manager import AlertManager, DangerLevel
@@ -12,8 +12,48 @@ from datetime import datetime, timedelta
 import csv
 import io
 import json
+import requests
+from urllib.parse import urljoin
 
-app = Flask(__name__, template_folder='../frontend', static_folder='../frontend/static')
+# Check if React build exists, otherwise fallback to old frontend
+REACT_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend-react', 'dist')
+REACT_DEV_SERVER = 'http://localhost:5173'
+OLD_FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+OLD_STATIC_DIR = os.path.join(OLD_FRONTEND_DIR, 'static')
+
+# Detect which frontend to use
+REACT_MODE = os.path.exists(REACT_BUILD_DIR)
+print(f"DEBUG: Checking for React build at {REACT_BUILD_DIR}: {REACT_MODE}")
+
+if not REACT_MODE:
+    # Check if React dev server is running
+    try:
+        response = requests.get(REACT_DEV_SERVER, timeout=2)
+        REACT_MODE = True
+        print(f"✅ React dev server detected at {REACT_DEV_SERVER}")
+    except Exception as e:
+        print(f"DEBUG: React dev server not found at {REACT_DEV_SERVER}: {e}")
+        pass
+
+print(f"DEBUG: REACT_MODE = {REACT_MODE}")
+
+# Use React if available, otherwise use old frontend
+if REACT_MODE and os.path.exists(REACT_BUILD_DIR):
+    print("ℹ️ Using React BUILD mode (static files from dist/)")
+    app = Flask(__name__, static_folder=REACT_BUILD_DIR, static_url_path='/')
+    REACT_BUILD_MODE = True
+    REACT_DEV_MODE = False
+elif REACT_MODE:
+    print("ℹ️ Using React DEV mode (proxying to dev server)")
+    app = Flask(__name__, static_url_path='/')
+    REACT_BUILD_MODE = False
+    REACT_DEV_MODE = True
+else:
+    print("ℹ️ Using OLD Vanilla JS frontend")
+    app = Flask(__name__, template_folder=OLD_FRONTEND_DIR, static_folder=OLD_STATIC_DIR)
+    REACT_BUILD_MODE = False
+    REACT_DEV_MODE = False
+
 CORS(app)
 
 # Initialize database
@@ -316,17 +356,8 @@ def register_device():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# ============ PAGE ROUTES ============
-
-@app.route('/')
-def index():
-    """Serve the main map page"""
-    return render_template('index.html')
-
-@app.route('/dashboard')
-def dashboard():
-    """Serve sensor data dashboard"""
-    return render_template('dashboard.html')
+# ============ FRONTEND SERVING ============
+# (Routes defined conditionally below based on frontend mode)
 
 @app.route('/health')
 def health_check():
@@ -433,6 +464,74 @@ def update_threshold():
             return jsonify({'error': 'Failed to update threshold'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ============ FRONTEND SERVING ============
+
+if REACT_DEV_MODE:
+    # Proxy to React dev server
+    @app.route('/')
+    def serve_root():
+        """Proxy root to React dev server"""
+        try:
+            response = requests.get(urljoin(REACT_DEV_SERVER, '/'), timeout=5)
+            return response.text, response.status_code, response.headers
+        except:
+            return jsonify({'error': 'React dev server not available'}), 502
+
+    @app.route('/<path:path>')
+    def serve_dev(path):
+        """Proxy non-API routes to React dev server"""
+        if path.startswith('api/'):
+            return jsonify({'error': 'Not Found'}), 404
+        
+        try:
+            url = urljoin(REACT_DEV_SERVER, '/' + path)
+            response = requests.get(url, timeout=5)
+            return response.text, response.status_code, response.headers
+        except:
+            try:
+                response = requests.get(urljoin(REACT_DEV_SERVER, '/'), timeout=5)
+                return response.text, response.status_code, response.headers
+            except:
+                return jsonify({'error': 'React dev server not available'}), 502
+
+elif REACT_BUILD_MODE:
+    # React SPA from build folder
+    @app.route('/static/<path:path>')
+    def send_static(path):
+        """Serve static assets from React build"""
+        return send_from_directory(os.path.join(REACT_BUILD_DIR, 'static'), path)
+
+    @app.route('/')
+    def serve_react_root():
+        """Serve React app at root"""
+        return send_from_directory(REACT_BUILD_DIR, 'index.html')
+
+    @app.route('/<path:path>')
+    def serve_react(path):
+        """Serve React app for all non-API routes (SPA routing)"""
+        if '.' in path:
+            file_path = os.path.join(REACT_BUILD_DIR, path)
+            if os.path.exists(file_path):
+                return send_from_directory(REACT_BUILD_DIR, path)
+        
+        index_path = os.path.join(REACT_BUILD_DIR, 'index.html')
+        if os.path.exists(index_path):
+            return send_from_directory(REACT_BUILD_DIR, 'index.html')
+        
+        return jsonify({'error': 'React build not found. Run: cd frontend-react && npm run build'}), 404
+
+else:
+    # Old Vanilla JS frontend
+    @app.route('/')
+    def index():
+        """Serve the main map page"""
+        return render_template('index.html')
+
+    @app.route('/dashboard')
+    def dashboard():
+        """Serve sensor data dashboard"""
+        return render_template('dashboard.html')
 
 if __name__ == '__main__':
     print("🚀 Starting Web Server on http://localhost:5000")
