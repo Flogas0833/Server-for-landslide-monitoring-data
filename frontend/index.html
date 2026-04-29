@@ -1,68 +1,13 @@
-<!DOCTYPE html>
-<html lang="vi">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bản đồ Cảm Biến - Landslide Monitoring</title>
-
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-
-<body>
-    <div class="container">
-        <header>
-            <h1>🛰️ Bản đồ Cảm Biến Giám Sát Sạt Lở</h1>
-            <div class="header-info">
-                <span id="device-count">Cảm biến: -</span>
-                <span id="last-update">Cập nhật: -</span>
-            </div>
-        </header>
-
-        <main>
-            <!-- Map container -->
-            <div id="map"></div>
-
-            <!-- Side panel -->
-            <div class="side-panel">
-                <div class="panel-header">
-                    <h2>Danh Sách Cảm Biến</h2>
-                    <button class="close-btn" onclick="togglePanel()">✕</button>
-                </div>
-
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="Tìm kiếm cảm biến..." onkeyup="filterDevices()">
-                </div>
-
-                <div class="device-list" id="device-list">
-                    <div class="loading">Đang tải...</div>
-                </div>
-            </div>
-
-            <!-- Toggle panel button (mobile) -->
-            <button class="toggle-panel-btn" onclick="togglePanel()">📋 Cảm Biến</button>
-
-            <!-- Popup for device details -->
-            <div id="device-popup" class="popup" style="display: none;">
-                <div class="popup-content">
-                    <button class="close-popup" onclick="closeDevicePopup()">✕</button>
-                    <h3 id="popup-device-id"></h3>
-                    <div id="popup-content"></div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-
-    <!-- App JS -->
-    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
-</body>
-
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Landslide Monitoring System</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

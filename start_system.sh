@@ -58,7 +58,7 @@ echo ""
 
 # Step 2: Start React frontend 
 echo -e "${YELLOW}[2/7]${NC} Starting React frontend..."
-cd "$SCRIPT_DIR/frontend-react"
+cd "$SCRIPT_DIR/frontend"
 if [ -f "package.json" ]; then
     echo "  • Starting dev server on http://localhost:5173..."
     npm run dev > /tmp/frontend.log 2>&1 &
@@ -187,7 +187,7 @@ if [ "$SERVICES_OK" = true ]; then
     echo -e "🎨 ${YELLOW}USING FRONTEND${NC}"
     if [ "$REACT_READY" = true ] || timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/5173" 2>/dev/null; then
         echo "   React + Vite"
-    elif [ -d "$SCRIPT_DIR/frontend-react/dist" ]; then
+    elif [ -d "$SCRIPT_DIR/frontend/dist" ]; then
         echo "   React + TanStack (Modern Build)"
     else
         echo "   Vanilla JavaScript (Legacy)"

@@ -207,39 +207,69 @@ Endpoints:
   GET /api/health                     → Server status
 ```
 
-#### **6. Frontend - Web UI**
+#### **6. Frontend - Web UI (React + TanStack)**
 ```
+Location: frontend/
+
+Technology:
+├─ React 19 (UI Framework)
+├─ Vite (Build tool)
+├─ TanStack Query (Data fetching)
+├─ TanStack Router (Routing)
+├─ Tailwind CSS (Styling)
+├─ Leaflet (Maps)
+└─ Radix UI (Components)
+
 Files:
-├─ frontend/index.html                → Map view (OpenStreetMap)
-├─ frontend/dashboard.html            → Data dashboard
-│
-├─ static/css/
-│  ├─ style.css                       → Map styling
-│  └─ dashboard.css                   → Dashboard styling
-│
-└─ static/js/
-   ├─ map.js                          → Map interactions
-   └─ dashboard.js                    → Data visualization
+├─ src/
+│  ├─ pages/
+│  │  ├─ LoginPage.jsx          → Authentication
+│  │  ├─ MapPage.jsx             → Interactive map view
+│  │  └─ DashboardPage.jsx       → Data dashboard
+│  │
+│  ├─ components/
+│  │  ├─ MapComponent.jsx        → Leaflet map with device pins
+│  │  ├─ SensorTable.jsx         → Data table with filtering
+│  │  ├─ AlertPanel.jsx          → Real-time alerts
+│  │  ├─ Statistics.jsx          → Overview cards
+│  │  ├─ DevicePanel.jsx         → Device details
+│  │  └─ QueryStatus.jsx         → Loading/status indicator
+│  │
+│  ├─ hooks/
+│  │  ├─ useDevices.js          → Fetch devices data
+│  │  ├─ useSensors.js          → Fetch sensor data
+│  │  └─ useAlerts.js           → Fetch alerts data
+│  │
+│  ├─ contexts/
+│  │  └─ AuthContext.jsx        → Authentication state
+│  │
+│  └─ styles/
+│     └─ *.css                  → Component styles
 
 Features:
-├─ 🗺️ Interactive Maps (Leaflet.js)
-│  └─ Device pins with live locations
+├─ 🔐 Authentication (Login/Logout)
+│  └─ Token-based auth with demo user
+│
+├─ 🗺️ Interactive Maps
+│  ├─ Device pins with live status
+│  ├─ Click to view device details
+│  └─ Real-time position updates
 │
 ├─ 📊 Real-time Dashboard
-│  ├─ Statistics cards (devices, warnings)
-│  ├─ 📈 Interactive charts (Chart.js)
-│  ├─ 📋 Data tables (all 5 sensor types)
+│  ├─ Statistics overview
+│  ├─ 📈 Sensor data tables
 │  ├─ 🔍 Filter & search
-│  └─ 💾 CSV/JSON export
+│  ├─ 📱 Responsive design
+│  └─ 💾 Data export
 │
-├─ 🚨 Alert Panel
-│  ├─ Color-coded severity (RED=CRITICAL, etc)
-│  ├─ Real-time polling (/api/alerts)
-│  ├─ Acknowledge functionality
-│  └─ Sound notifications for CRITICAL
+├─ 🚨 Alert Management
+│  ├─ Real-time alert notifications
+│  ├─ Color-coded severity levels
+│  ├─ Acknowledge alerts
+│  └─ Alert history
 │
 └─ 📱 Responsive Design
-   └─ Works on desktop, tablet, mobile
+   └─ Desktop, tablet, mobile optimized
 ```
 
 #### **7. Database - SQLite**
@@ -328,9 +358,13 @@ GET /api/alerts
 | **Web Framework** | Flask | 2.3.0 | REST API server |
 | **MQTT Client** | Paho-MQTT | 1.6.1 | Python MQTT library |
 | **Database** | SQLite | 3.x | Data persistence |
-| **Frontend Framework** | HTML5/CSS3/JS (Vanilla) | ES6+ | Web UI |
-| **Mapping Library** | Leaflet.js | 1.9+ | Interactive maps |
-| **Charting Library** | Chart.js | 4.4.0 | Data visualization |
+| **Frontend Framework** | React | 19.2.5 | UI components & state |
+| **Frontend Build Tool** | Vite | 8.0.9 | Fast build & dev server |
+| **Frontend Styling** | Tailwind CSS | 4.2.4 | Utility-first CSS |
+| **Frontend Data** | TanStack Query | 5.99.2 | Server state management |
+| **Frontend Router** | TanStack Router | 1.168.23 | Routing & navigation |
+| **Frontend Table** | TanStack Table | 8.21.3 | Data table management |
+| **Mapping Library** | Leaflet | 1.9.4 | Interactive maps |
 | **HTTP Server** | Flask (built-in) | - | Port 5000 |
 
 ### Project Structure
@@ -346,15 +380,16 @@ Server-for-landslide-monitoring-data/
 │   └── config_manager.py       # Configuration handling
 │
 ├── frontend/
-│   ├── index.html              # OpenStreetMap view
-│   ├── dashboard.html          # Data dashboard
-│   └── static/
-│       ├── css/
-│       │   ├── style.css       # Map styling
-│       │   └── dashboard.css   # Dashboard styling
-│       └── js/
-│           ├── map.js          # Map interactions
-│           └── dashboard.js    # Data visualization
+│   ├── src/                    # React source code
+│   │   ├── pages/              # Page components
+│   │   ├── components/         # Reusable components
+│   │   ├── hooks/              # Custom React hooks
+│   │   ├── contexts/           # Context providers
+│   │   └── styles/             # Component styles
+│   ├── package.json            # Dependencies
+│   ├── tailwind.config.js      # Tailwind CSS config
+│   ├── vite.config.js          # Vite build config
+│   └── index.html              # Entry point
 │
 ├── config/
 │   ├── mosquitto.conf          # MQTT broker config
