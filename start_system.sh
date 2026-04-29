@@ -43,19 +43,37 @@ check_port() {
 }
 
 # Step 1: Ensure database directory exists
-echo -e "${YELLOW}[1/6]${NC} Preparing database directory..."
+echo -e "${YELLOW}[1/7]${NC} Preparing database directory..."
 mkdir -p "$DATABASE_DIR"
 echo -e "${GREEN}✓${NC} Database directory ready"
 echo ""
 
+# Step 1.5: Kill any processes holding ports we need
+echo -e "${YELLOW}[1.5/7]${NC} Freeing ports..."
+pkill -f "npm run dev" 2>/dev/null || true
+fuser -k 5173/tcp 2>/dev/null || lsof -ti :5173 | xargs kill -9 2>/dev/null || true
+sleep 1
+echo -e "${GREEN}✓${NC} Ports cleared"
+echo ""
+
 # Step 2: Start React frontend 
-echo -e "${YELLOW}[2/6]${NC} Starting React frontend..."
+echo -e "${YELLOW}[2/7]${NC} Starting React frontend..."
 cd "$SCRIPT_DIR/frontend-react"
 if [ -f "package.json" ]; then
     echo "  • Starting dev server on http://localhost:5173..."
     npm run dev > /tmp/frontend.log 2>&1 &
     FRONTEND_PID=$!
-    sleep 3
+    echo "  ⏳ Waiting for React dev server to be ready..."
+    for i in {1..15}; do
+        if timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/5173" 2>/dev/null; then
+            echo "  ✓ React dev server is listening!"
+            sleep 2
+            break
+        fi
+        if [ $i -lt 15 ]; then
+            sleep 1
+        fi
+    done
     echo -e "${GREEN}✓${NC} React frontend started"
 else
     echo -e "${YELLOW}⚠${NC} React project not found, using HTML CSS frontend"
@@ -63,7 +81,7 @@ fi
 echo ""
 
 # Step 3: Kill any existing processes
-echo -e "${YELLOW}[3/6]${NC} Cleaning up any existing processes..."
+echo -e "${YELLOW}[3/7]${NC} Cleaning up any existing processes..."
 pkill -f "mqtt_subscriber.py" 2>/dev/null || true
 pkill -f "mqtt_publisher.py" 2>/dev/null || true
 pkill -f "web_server.py" 2>/dev/null || true
@@ -72,18 +90,43 @@ echo -e "${GREEN}✓${NC} Cleanup complete"
 echo ""
 
 # Step 4: Start MQTT Broker
-echo -e "${YELLOW}[4/6]${NC} Starting MQTT Broker..."
-if sudo systemctl is-active --quiet mosquitto; then
+echo -e "${YELLOW}[4/7]${NC} Starting MQTT Broker..."
+if pgrep -f mosquitto > /dev/null; then
     echo -e "${GREEN}✓${NC} MQTT Broker already running"
 else
-    sudo systemctl start mosquitto
-    sleep 1
-    echo -e "${GREEN}✓${NC} MQTT Broker started"
+    echo "  • Attempting to start MQTT Broker..."
+    if sudo -n systemctl start mosquitto 2>/dev/null; then
+        sleep 1
+        echo -e "${GREEN}✓${NC} MQTT Broker started"
+    else
+        echo -e "${YELLOW}⚠${NC} Could not start mosquitto (requires sudo). Please ensure mosquitto is running."
+        echo "  Run: sudo systemctl start mosquitto"
+    fi
+fi
+echo ""
+
+# Step 5: Verify React dev server is ready
+echo -e "${YELLOW}[5/7]${NC} Verifying React dev server..."
+REACT_READY=false
+for i in {1..10}; do
+    if timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/5173" 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} React dev server is ready on port 5173"
+        REACT_READY=true
+        break
+    fi
+    if [ $i -lt 10 ]; then
+        echo "  ⏳ Waiting for React dev server... (attempt $i/10)"
+        sleep 1
+    fi
+done
+
+if [ "$REACT_READY" = false ]; then
+    echo -e "${YELLOW}⚠${NC} React dev server not ready, will use Vanilla JS frontend"
 fi
 echo ""
 
 # Step 5: Start backend services
-echo -e "${YELLOW}[5/6]${NC} Starting backend services..."
+echo -e "${YELLOW}[6/7]${NC} Starting backend services..."
 cd "$BACKEND_DIR"
 
 echo "  • Starting MQTT Subscriber..."
@@ -102,7 +145,7 @@ echo -e "${GREEN}✓${NC} All backend services started"
 echo ""
 
 # Step 6: Verify services
-echo -e "${YELLOW}[6/6]${NC} Verifying services..."
+echo -e "${YELLOW}[7/7]${NC} Verifying services..."
 SERVICES_OK=true
 MAX_RETRIES=10
 RETRY_COUNT=0
@@ -142,21 +185,14 @@ if [ "$SERVICES_OK" = true ]; then
     echo "============================================================================"
     echo ""
     echo -e "🎨 ${YELLOW}USING FRONTEND${NC}"
-    if [ -d "$SCRIPT_DIR/frontend-react/dist" ]; then
-        echo "   React + TanStack (Modern)"
+    if [ "$REACT_READY" = true ] || timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/5173" 2>/dev/null; then
+        echo "   React + Vite"
+    elif [ -d "$SCRIPT_DIR/frontend-react/dist" ]; then
+        echo "   React + TanStack (Modern Build)"
     else
         echo "   Vanilla JavaScript (Legacy)"
     fi
-    echo ""
-    echo -e "📍 ${YELLOW}INTERACTIVE MAP${NC}"
-    echo "   http://localhost:5000/"
-    echo ""
-    echo -e "📊 ${YELLOW}DASHBOARD${NC}"
-    echo "   http://localhost:5000/dashboard"
-    echo ""
-    echo -e "📡 ${YELLOW}API ENDPOINT${NC}"
-    echo "   http://localhost:5000/api/devices"
-    echo ""
+    echo "   📦 Dev Server: http://localhost:5173"
     echo -e "📝 ${YELLOW}LOGS${NC}"
     echo "   MQTT Subscriber: tail -f /tmp/subscriber.log"
     echo "   MQTT Publisher:  tail -f /tmp/publisher.log"

@@ -2,8 +2,9 @@
 .dashboard-page {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: auto;
     background-color: #f5f5f5;
+    padding-bottom: 24px;
 }
 
 .page-header {
@@ -86,9 +87,9 @@ main {
 }
 
 .control-group label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #333;
+    font-size: 14px;
+    font-weight: 700;
+    color: #222;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -96,9 +97,11 @@ main {
 .control-select,
 .control-input {
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid #bbb;
     border-radius: 4px;
     font-size: 14px;
+    font-weight: 500;
+    color: #222;
     background-color: white;
     transition: border-color 0.3s ease;
 }

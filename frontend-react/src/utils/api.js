@@ -9,11 +9,46 @@ const api = axios.create({
     },
 });
 
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Clear auth token and redirect to login
+            localStorage.removeItem('auth_token');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 // Device APIs
 export const deviceAPI = {
     getAllDevices: async () => {
-        const { data } = await api.get('/api/devices');
-        return data;
+        // Use public endpoint first (no auth required), fallback to private
+        try {
+            const { data } = await api.get('/api/devices/public');
+            // Extract devices array from response
+            return data.devices || data || [];
+        } catch (error) {
+            // Fallback to authenticated endpoint
+            const { data } = await api.get('/api/devices');
+            return data || [];
+        }
     },
 
     getDeviceDetail: async (deviceId) => {

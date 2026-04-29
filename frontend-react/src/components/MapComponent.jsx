@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useDevices } from '../hooks/useDevices';
+import QueryStatus from './QueryStatus';
 import { formatTime, getStatusClass } from '../utils/helpers';
 import '../styles/map.css';
+import '../styles/queryStatus.css';
 
 // Fix Leaflet marker icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -102,10 +104,10 @@ export default function MapComponent({ onDeviceSelect }) {
     }, [map, devices, onDeviceSelect]);
 
     return (
-        <div className="map-container">
+        <div className="map-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
             {isLoading && <div className="map-loading">Đang tải bản đồ...</div>}
             {error && <div className="map-error">Lỗi tải bản đồ: {error.message}</div>}
-            <div ref={mapRef} className="map" />
+            <div ref={mapRef} className="map" style={{ width: '100%', height: '100%' }} />
         </div>
     );
 }

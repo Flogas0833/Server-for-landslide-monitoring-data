@@ -1,7 +1,7 @@
 {
     "devices": [
         {
-            "device_id": "DEVICE001",
+            "device_id": "SENSOR_POINT001",
             "site_id": "SITE01",
             "project_id": "PRJ001",
             "name": "Sensor 1",
@@ -19,7 +19,7 @@
             "base_alt": 500.0
         },
         {
-            "device_id": "DEVICE002",
+            "device_id": "SENSOR_POINT002",
             "site_id": "SITE02",
             "project_id": "PRJ001",
             "name": "Sensor 2",

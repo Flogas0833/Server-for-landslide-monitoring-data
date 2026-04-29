@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useDevices } from '../hooks/useDevices';
 import { formatTime } from '../utils/helpers';
-import '../styles/devicePanel.css';
+import { Card, CardContent, CardHeader, CardTitle, Input, Badge, Button, Loader } from './ui';
+import { MapPin, Wifi, WifiOff } from 'lucide-react';
 
 export default function DevicePanel({ selectedDeviceId, onDeviceSelect }) {
     const [searchTerm, setSearchTerm] = useState('');
@@ -16,48 +17,57 @@ export default function DevicePanel({ selectedDeviceId, onDeviceSelect }) {
     }, [devices, searchTerm]);
 
     return (
-        <div className="device-panel">
-            <div className="panel-header">
-                <h2>📋 Danh Sách Cảm Biến</h2>
-            </div>
+        <Card className="w-full h-full flex flex-col">
+            <CardHeader className="pb-3">
+                <CardTitle>Danh Sách Cảm Biến</CardTitle>
+            </CardHeader>
 
-            <div className="search-box">
-                <input
+            <div className="px-6 pb-3">
+                <Input
                     type="text"
                     placeholder="Tìm kiếm cảm biến..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="search-input"
                 />
             </div>
 
-            <div className="device-list">
+            <CardContent className="flex-1 overflow-y-auto space-y-2">
                 {isLoading ? (
-                    <div className="loading">Đang tải...</div>
+                    <div className="flex justify-center items-center h-20">
+                        <Loader />
+                    </div>
                 ) : filteredDevices.length === 0 ? (
-                    <div className="empty">Không có cảm biến nào</div>
+                    <div className="text-center py-8 text-muted-foreground">
+                        <p>Không có cảm biến nào</p>
+                    </div>
                 ) : (
                     filteredDevices.map((device) => (
-                        <div
+                        <Button
                             key={device.device_id}
-                            className={`device-item ${selectedDeviceId === device.device_id ? 'active' : ''}`}
+                            variant={selectedDeviceId === device.device_id ? 'default' : 'outline'}
+                            className="w-full justify-start h-auto py-3 px-4"
                             onClick={() => onDeviceSelect(device.device_id)}
                         >
-                            <div className="device-info">
-                                <h3>{device.name || device.device_id}</h3>
-                                <p className="device-id">{device.device_id}</p>
-                                <p className="device-location">
-                                    📍 {device.latitude?.toFixed(4)}, {device.longitude?.toFixed(4)}
-                                </p>
-                                <p className="device-time">Cập nhật: {formatTime(device.last_update)}</p>
+                            <div className="text-left w-full space-y-1">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-semibold">{device.name || device.device_id}</span>
+                                    {device.status === 'active' ? (
+                                        <Wifi className="w-4 h-4 text-green-600" />
+                                    ) : (
+                                        <WifiOff className="w-4 h-4 text-red-600" />
+                                    )}
+                                </div>
+                                <p className="text-xs opacity-70">{device.device_id}</p>
+                                <div className="flex items-center gap-1 text-xs opacity-70">
+                                    <MapPin className="w-3 h-3" />
+                                    {device.latitude?.toFixed(4)}, {device.longitude?.toFixed(4)}
+                                </div>
+                                <p className="text-xs opacity-70">Cập nhật: {formatTime(device.last_update)}</p>
                             </div>
-                            <div className={`device-status ${device.status}`}>
-                                {device.status === 'active' ? '✓' : '✗'}
-                            </div>
-                        </div>
+                        </Button>
                     ))
                 )}
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     );
 }

@@ -1,28 +1,30 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
     createColumnHelper,
     flexRender,
     getCoreRowModel,
     getPaginationRowModel,
     getSortedRowModel,
-    getFilteredRowModel,
     useReactTable,
 } from '@tanstack/react-table';
 import { useSensorData } from '../hooks/useSensors';
+import QueryStatus from './QueryStatus';
 import { formatTime, formatValue } from '../utils/helpers';
-import '../styles/sensorTable.css';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Card, CardHeader, CardTitle, CardContent, Button, Loader } from './ui';
+import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const columnHelper = createColumnHelper();
 
 function TiltTable({ sensorType, params }) {
-    const { data: response, isLoading } = useSensorData(sensorType, params);
+    const query = useSensorData(sensorType, params);
+    const { data: response, isLoading } = query;
     const records = response?.data || [];
 
     const columns = useMemo(
         () => [
             columnHelper.accessor('device_id', {
                 header: 'Cảm Biến',
-                cell: (info) => <span className="device-id">{info.getValue()}</span>,
+                cell: (info) => <span className="font-mono text-sm">{info.getValue()}</span>,
             }),
             columnHelper.accessor('timestamp', {
                 header: 'Thời Gian',
@@ -55,18 +57,19 @@ function TiltTable({ sensorType, params }) {
         },
     });
 
-    return <TableRenderer table={table} isLoading={isLoading} />;
+    return <TableRenderer table={table} query={query} isLoading={isLoading} />;
 }
 
 function VibrationTable({ sensorType, params }) {
-    const { data: response, isLoading } = useSensorData(sensorType, params);
+    const query = useSensorData(sensorType, params);
+    const { data: response, isLoading } = query;
     const records = response?.data || [];
 
     const columns = useMemo(
         () => [
             columnHelper.accessor('device_id', {
                 header: 'Cảm Biến',
-                cell: (info) => <span className="device-id">{info.getValue()}</span>,
+                cell: (info) => <span className="font-mono text-sm">{info.getValue()}</span>,
             }),
             columnHelper.accessor('timestamp', {
                 header: 'Thời Gian',
@@ -109,18 +112,19 @@ function VibrationTable({ sensorType, params }) {
         },
     });
 
-    return <TableRenderer table={table} isLoading={isLoading} />;
+    return <TableRenderer table={table} query={query} isLoading={isLoading} />;
 }
 
 function DisplacementTable({ sensorType, params }) {
-    const { data: response, isLoading } = useSensorData(sensorType, params);
+    const query = useSensorData(sensorType, params);
+    const { data: response, isLoading } = query;
     const records = response?.data || [];
 
     const columns = useMemo(
         () => [
             columnHelper.accessor('device_id', {
                 header: 'Cảm Biến',
-                cell: (info) => <span className="device-id">{info.getValue()}</span>,
+                cell: (info) => <span className="font-mono text-sm">{info.getValue()}</span>,
             }),
             columnHelper.accessor('timestamp', {
                 header: 'Thời Gian',
@@ -142,7 +146,7 @@ function DisplacementTable({ sensorType, params }) {
                 cell: (info) => {
                     const value = info.getValue();
                     const isHigh = value > 100;
-                    return <span className={isHigh ? 'high' : ''}>{formatValue(value)}</span>;
+                    return <span className={isHigh ? 'font-semibold text-red-600' : ''}>{formatValue(value)}</span>;
                 },
             }),
         ],
@@ -162,69 +166,111 @@ function DisplacementTable({ sensorType, params }) {
         },
     });
 
-    return <TableRenderer table={table} isLoading={isLoading} />;
+    return <TableRenderer table={table} query={query} isLoading={isLoading} />;
 }
 
-function TableRenderer({ table, isLoading }) {
+function TableRenderer({ table, query, isLoading }) {
     return (
-        <div className="table-container">
-            {isLoading ? (
-                <div className="loading">Đang tải dữ liệu...</div>
-            ) : (
-                <>
-                    <table className="data-table">
-                        <thead>
-                            {table.getHeaderGroups().map((headerGroup) => (
-                                <tr key={headerGroup.id}>
-                                    {headerGroup.headers.map((header) => (
-                                        <th key={header.id}>
-                                            {header.isPlaceholder ? null : (
-                                                <div
-                                                    className={header.column.getCanSort() ? 'cursor-pointer select-none' : ''}
+        <Card className="w-full">
+            <CardHeader>
+                <CardTitle>Dữ Liệu Cảm Biến</CardTitle>
+                <QueryStatus query={query} label="Trạng thái" />
+            </CardHeader>
+
+            <CardContent>
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-32">
+                        <Loader />
+                    </div>
+                ) : (
+                    <>
+                        <div className="border rounded-md overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    {table.getHeaderGroups().map((headerGroup) => (
+                                        <TableRow key={headerGroup.id}>
+                                            {headerGroup.headers.map((header) => (
+                                                <TableHead
+                                                    key={header.id}
+                                                    className={header.column.getCanSort() ? 'cursor-pointer select-none hover:bg-muted' : ''}
                                                     onClick={header.column.getToggleSortingHandler()}
                                                 >
-                                                    {flexRender(header.column.columnDef.header, header.getContext())}
-                                                    {header.column.getIsSorted() && (
-                                                        <span>{header.column.getIsSorted() === 'desc' ? ' 🔽' : ' 🔼'}</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </th>
+                                                    <div className="flex items-center gap-1">
+                                                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                                                        {header.column.getIsSorted() && (
+                                                            <span className="text-xs">
+                                                                {header.column.getIsSorted() === 'desc' ? '↓' : '↑'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </TableHead>
+                                            ))}
+                                        </TableRow>
                                     ))}
-                                </tr>
-                            ))}
-                        </thead>
-                        <tbody>
-                            {table.getRowModel().rows.map((row) => (
-                                <tr key={row.id}>
-                                    {row.getVisibleCells().map((cell) => (
-                                        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                </TableHeader>
+                                <TableBody>
+                                    {table.getRowModel().rows.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={table.getAllColumns().length} className="text-center text-muted-foreground py-4">
+                                                Không có dữ liệu
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        table.getRowModel().rows.map((row) => (
+                                            <TableRow key={row.id}>
+                                                {row.getVisibleCells().map((cell) => (
+                                                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
 
-                    <div className="pagination">
-                        <button onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}>
-                            {'<<'}
-                        </button>
-                        <button onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-                            {'<'}
-                        </button>
-                        <span>
-                            Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
-                        </span>
-                        <button onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-                            {'>'}
-                        </button>
-                        <button onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}>
-                            {'>>'}
-                        </button>
-                    </div>
-                </>
-            )}
-        </div>
+                        <div className="flex items-center justify-between gap-2 py-4">
+                            <div className="text-sm text-muted-foreground">
+                                Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => table.setPageIndex(0)}
+                                    disabled={!table.getCanPreviousPage()}
+                                >
+                                    <ChevronFirst className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => table.previousPage()}
+                                    disabled={!table.getCanPreviousPage()}
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => table.nextPage()}
+                                    disabled={!table.getCanNextPage()}
+                                >
+                                    <ChevronRight className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                                    disabled={!table.getCanNextPage()}
+                                >
+                                    <ChevronLast className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </CardContent>
+        </Card>
     );
 }
 
@@ -237,6 +283,6 @@ export function SensorTable({ sensorType, params }) {
         case 'displacement':
             return <DisplacementTable sensorType={sensorType} params={params} />;
         default:
-            return <div className="unsupported">Loại cảm biến không được hỗ trợ: {sensorType}</div>;
+            return <Card className="w-full"><CardContent className="py-4">Loại cảm biến không được hỗ trợ: {sensorType}</CardContent></Card>;
     }
 }

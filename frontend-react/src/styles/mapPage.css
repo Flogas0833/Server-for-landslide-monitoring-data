@@ -18,9 +18,17 @@
 }
 
 .header-info {
-    margin-top: 8px;
+    margin-top: 12px;
     font-size: 14px;
     opacity: 0.9;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.header-info span {
+    display: inline-block;
 }
 
 .map-layout {

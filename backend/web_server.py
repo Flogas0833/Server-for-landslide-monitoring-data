@@ -97,9 +97,44 @@ def get_devices():
             if device_info['latitude'] is not None and device_info['longitude'] is not None:
                 devices_with_location.append(device_info)
         
-        return jsonify(devices_with_location)
+        return jsonify({'status': 'ok', 'devices': devices_with_location})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/public', methods=['GET'])
+def get_devices_public():
+    """Get all devices with latest locations (PUBLIC - no auth required)"""
+    try:
+        devices = db.get_all_devices()
+        
+        # Filter and enhance devices with location data
+        devices_with_location = []
+        for device in devices:
+            # Get latest GNSS reading for this device
+            gnss_lat = device.get('latitude')
+            gnss_lon = device.get('longitude')
+            gnss_alt = device.get('altitude')
+            
+            # Include device even if coordinates are not yet available
+            # (they will be populated from GNSS sensor readings)
+            device_info = {
+                'device_id': device['device_id'],
+                'project_id': device['project_id'],
+                'site_id': device['site_id'],
+                'latitude': float(gnss_lat) if gnss_lat else None,
+                'longitude': float(gnss_lon) if gnss_lon else None,
+                'altitude': float(gnss_alt) if gnss_alt else None,
+                'name': device['name'] or device['device_id'],
+                'status': device['status'],
+                'alert_status': device.get('alert_status', 'normal'),
+                'last_update': device['last_update']
+            }
+            
+            devices_with_location.append(device_info)
+        
+        return jsonify({'status': 'ok', 'devices': devices_with_location}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/device/<device_id>', methods=['GET'])
 def get_device_detail(device_id):
@@ -363,6 +398,81 @@ def register_device():
 def health_check():
     """Health check endpoint"""
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
+
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    """API health check endpoint"""
+    return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
+
+# ============ AUTH ENDPOINTS ============
+
+@app.route('/api/auth/check', methods=['GET'])
+def auth_check():
+    """Check if user is authenticated"""
+    try:
+        # For now, always return authenticated with demo user
+        # In production, you would check session/token here
+        return jsonify({
+            'authenticated': True,
+            'user': {
+                'id': 'demo',
+                'username': 'demo_user',
+                'role': 'admin'
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/auth/auto-login', methods=['POST'])
+def auto_login():
+    """Auto-login endpoint"""
+    try:
+        # For now, always auto-login with demo user
+        # In production, you would implement proper authentication here
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': 'demo',
+                'username': 'demo_user',
+                'role': 'admin'
+            },
+            'token': 'demo_token'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login endpoint"""
+    try:
+        data = request.json
+        username = data.get('username', '')
+        password = data.get('password', '')
+        
+        # For now, accept any username/password combination
+        # In production, you would validate against a user database
+        if username and password:
+            return jsonify({
+                'success': True,
+                'user': {
+                    'id': username,
+                    'username': username,
+                    'role': 'admin'
+                },
+                'token': 'demo_token'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    """Logout endpoint"""
+    try:
+        return jsonify({'success': True, 'message': 'Logged out successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ============ ALERT ENDPOINTS ============
 
