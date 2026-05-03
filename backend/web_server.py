@@ -3,7 +3,7 @@ Web Server - Flask API for sensor data and OpenStreetMap visualization
 Provides REST endpoints and serves the interactive map frontend
 """
 
-from flask import Flask, render_template, jsonify, request, Response, send_from_directory
+from flask import Flask, jsonify, request, Response, send_from_directory
 from flask_cors import CORS
 from database import SensorDatabase
 from alert_manager import AlertManager, DangerLevel
@@ -13,46 +13,52 @@ import csv
 import io
 import json
 import requests
+import time
 from urllib.parse import urljoin
 
-# Check if React build exists, otherwise fallback to old frontend
-REACT_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend-react', 'dist')
+# React frontend configuration
+REACT_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
 REACT_DEV_SERVER = 'http://localhost:5173'
-OLD_FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
-OLD_STATIC_DIR = os.path.join(OLD_FRONTEND_DIR, 'static')
 
-# Detect which frontend to use
-REACT_MODE = os.path.exists(REACT_BUILD_DIR)
-print(f"DEBUG: Checking for React build at {REACT_BUILD_DIR}: {REACT_MODE}")
+def find_react_dev_server(max_retries=20, retry_delay=0.5):
+    """
+    Try to detect React dev server with retry logic.
+    Returns True if React dev server is found, False otherwise.
+    """
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(REACT_DEV_SERVER, timeout=1)
+            if response.status_code == 200:
+                print(f"✅ React dev server detected at {REACT_DEV_SERVER} (attempt {attempt + 1})")
+                return True
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"⏳ React dev server check {attempt + 1}/{max_retries} - not ready yet, retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+            else:
+                print(f"❌ React dev server not found at {REACT_DEV_SERVER} after {max_retries} attempts")
+    return False
 
-if not REACT_MODE:
-    # Check if React dev server is running
-    try:
-        response = requests.get(REACT_DEV_SERVER, timeout=2)
-        REACT_MODE = True
-        print(f"✅ React dev server detected at {REACT_DEV_SERVER}")
-    except Exception as e:
-        print(f"DEBUG: React dev server not found at {REACT_DEV_SERVER}: {e}")
-        pass
+# Detect which React mode to use
+REACT_BUILD_MODE = os.path.exists(REACT_BUILD_DIR)
+print(f"DEBUG: Checking for React build at {REACT_BUILD_DIR}: {REACT_BUILD_MODE}")
 
-print(f"DEBUG: REACT_MODE = {REACT_MODE}")
+if not REACT_BUILD_MODE:
+    # Check if React dev server is running with retry logic
+    print("⏳ Attempting to detect React dev server...")
+    REACT_DEV_MODE = find_react_dev_server()
+else:
+    REACT_DEV_MODE = False
 
-# Use React if available, otherwise use old frontend
-if REACT_MODE and os.path.exists(REACT_BUILD_DIR):
+print(f"DEBUG: REACT_BUILD_MODE = {REACT_BUILD_MODE}, REACT_DEV_MODE = {REACT_DEV_MODE}")
+
+# Initialize Flask app
+if REACT_BUILD_MODE:
     print("ℹ️ Using React BUILD mode (static files from dist/)")
     app = Flask(__name__, static_folder=REACT_BUILD_DIR, static_url_path='/')
-    REACT_BUILD_MODE = True
-    REACT_DEV_MODE = False
-elif REACT_MODE:
+else:
     print("ℹ️ Using React DEV mode (proxying to dev server)")
     app = Flask(__name__, static_url_path='/')
-    REACT_BUILD_MODE = False
-    REACT_DEV_MODE = True
-else:
-    print("ℹ️ Using OLD Vanilla JS frontend")
-    app = Flask(__name__, template_folder=OLD_FRONTEND_DIR, static_folder=OLD_STATIC_DIR)
-    REACT_BUILD_MODE = False
-    REACT_DEV_MODE = False
 
 CORS(app)
 
@@ -629,24 +635,13 @@ elif REACT_BUILD_MODE:
         if os.path.exists(index_path):
             return send_from_directory(REACT_BUILD_DIR, 'index.html')
         
-        return jsonify({'error': 'React build not found. Run: cd frontend-react && npm run build'}), 404
+        return jsonify({'error': 'React build not found. Run: cd frontend && npm run build'}), 404
 
-else:
-    # Old Vanilla JS frontend
-    @app.route('/')
-    def index():
-        """Serve the main map page"""
-        return render_template('index.html')
 
-    @app.route('/dashboard')
-    def dashboard():
-        """Serve sensor data dashboard"""
-        return render_template('dashboard.html')
 
 if __name__ == '__main__':
     print("🚀 Starting Web Server on http://localhost:5000")
-    print("📍 Interactive Map: http://localhost:5000/")
-    print("📊 Dashboard: http://localhost:5000/dashboard")
+    print("📍 React App: http://localhost:5000/")
     print("\n🔍 API ENDPOINTS:")
     print("\n📌 Basic Endpoints:")
     print("   - GET /api/devices - List all devices with latest locations")

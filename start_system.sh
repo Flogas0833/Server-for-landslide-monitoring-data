@@ -76,7 +76,8 @@ if [ -f "package.json" ]; then
     done
     echo -e "${GREEN}✓${NC} React frontend started"
 else
-    echo -e "${YELLOW}⚠${NC} React project not found, using HTML CSS frontend"
+    echo -e "${RED}✗${NC} React project not found at $SCRIPT_DIR/frontend"
+    exit 1
 fi
 echo ""
 
@@ -184,15 +185,15 @@ if [ "$SERVICES_OK" = true ]; then
     echo -e "${GREEN}✓ SYSTEM READY${NC}"
     echo "============================================================================"
     echo ""
-    echo -e "🎨 ${YELLOW}USING FRONTEND${NC}"
+    echo -e "🎨 ${YELLOW}FRONTEND${NC}"
     if [ "$REACT_READY" = true ] || timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/5173" 2>/dev/null; then
-        echo "   React + Vite"
+        echo "   • React + Vite (Dev Mode)"
     elif [ -d "$SCRIPT_DIR/frontend/dist" ]; then
-        echo "   React + TanStack (Modern Build)"
-    else
-        echo "   Vanilla JavaScript (Legacy)"
+        echo "   • React (Build Mode)"
     fi
-    echo "   📦 Dev Server: http://localhost:5173"
+    if timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/5173" 2>/dev/null; then
+        echo "   📦 Dev Server: http://localhost:5173"
+    fi
     echo -e "📝 ${YELLOW}LOGS${NC}"
     echo "   MQTT Subscriber: tail -f /tmp/subscriber.log"
     echo "   MQTT Publisher:  tail -f /tmp/publisher.log"
