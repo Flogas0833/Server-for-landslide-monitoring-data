@@ -3,11 +3,17 @@ Web Server - Flask API for sensor data and OpenStreetMap visualization
 Provides REST endpoints and serves the interactive map frontend
 """
 
-from flask import Flask, jsonify, request, Response, send_from_directory
+import sys
+import os
+
+# Add backend directory to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from flask import Flask, jsonify, request, Response, send_from_directory, g
 from flask_cors import CORS
 from database import SensorDatabase
 from alert_manager import AlertManager, DangerLevel
-import os
+from jwt_auth_manager import JWTAuthManager, RBACManager, require_auth, require_role, require_permission
 from datetime import datetime, timedelta
 import csv
 import io
@@ -68,11 +74,256 @@ db = SensorDatabase()
 # Initialize alert manager
 alert_manager = AlertManager()
 
+# ============ AUTHENTICATION ENDPOINTS ============
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Register a new user"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        # Validation
+        if not username or len(username) < 3:
+            return jsonify({'error': 'Username must be at least 3 characters'}), 400
+        
+        if not email or '@' not in email:
+            return jsonify({'error': 'Invalid email'}), 400
+        
+        if not password or len(password) < 6:
+            return jsonify({'error': 'Password must be at least 6 characters'}), 400
+        
+        # Check if user exists
+        existing_user = db.get_user_by_username(username)
+        if existing_user:
+            return jsonify({'error': 'Username already exists'}), 409
+        
+        # Hash password and create user
+        password_hash = JWTAuthManager.hash_password(password)
+        success = db.create_user(
+            username=username,
+            email=email,
+            password_hash=password_hash,
+            role='viewer'  # Default role for new users
+        )
+        
+        if success:
+            user = db.get_user_by_username(username)
+            db.add_audit_log(
+                user_id=None,
+                username=username,
+                action='user_registered',
+                resource_type='user',
+                resource_id=str(user['id']),
+                ip_address=request.remote_addr
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': 'User registered successfully',
+                'user': {
+                    'id': user['id'],
+                    'username': user['username'],
+                    'email': user['email'],
+                    'role': user['role']
+                }
+            }), 201
+        else:
+            return jsonify({'error': 'Failed to register user'}), 500
+    
+    except Exception as e:
+        print(f"Error in register: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login with username and password"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        
+        if not username or not password:
+            return jsonify({'error': 'Username and password required'}), 400
+        
+        # Verify credentials
+        user = db.get_user_by_username(username)
+        if not user or not JWTAuthManager.verify_password(password, user['password_hash']):
+            db.add_audit_log(
+                user_id=None,
+                username=username,
+                action='login_failed',
+                resource_type='user',
+                resource_id='',
+                ip_address=request.remote_addr
+            )
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        if not user.get('is_active'):
+            return jsonify({'error': 'User account is disabled'}), 403
+        
+        # Create tokens
+        access_token = JWTAuthManager.create_access_token(
+            user_id=str(user['id']),
+            username=user['username'],
+            role=user['role']
+        )
+        refresh_token = JWTAuthManager.create_refresh_token(
+            user_id=str(user['id']),
+            username=user['username']
+        )
+        
+        # Update last login
+        db.update_user_last_login(user['id'])
+        
+        # Audit log
+        db.add_audit_log(
+            user_id=user['id'],
+            username=username,
+            action='login_success',
+            resource_type='user',
+            resource_id=str(user['id']),
+            ip_address=request.remote_addr
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Login successful',
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'user': {
+                'id': user['id'],
+                'username': user['username'],
+                'email': user['email'],
+                'role': user['role']
+            }
+        }), 200
+    
+    except Exception as e:
+        print(f"Error in login: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/refresh', methods=['POST'])
+def refresh_token():
+    """Refresh access token using refresh token"""
+    try:
+        data = request.get_json()
+        refresh_tk = data.get('refresh_token', '')
+        
+        if not refresh_tk:
+            return jsonify({'error': 'Refresh token required'}), 400
+        
+        # Verify refresh token
+        is_valid, payload = JWTAuthManager.verify_token(refresh_tk)
+        
+        if not is_valid or payload.get('type') != 'refresh':
+            return jsonify({'error': 'Invalid refresh token'}), 401
+        
+        user_id = payload.get('user_id')
+        username = payload.get('username')
+        
+        # Get user info to get current role
+        user = db.get_user_by_id(int(user_id))
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Create new access token
+        new_access_token = JWTAuthManager.create_access_token(
+            user_id=str(user['id']),
+            username=user['username'],
+            role=user['role']
+        )
+        
+        return jsonify({
+            'success': True,
+            'access_token': new_access_token
+        }), 200
+    
+    except Exception as e:
+        print(f"Error in refresh_token: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/auth/check', methods=['GET'])
+def check_auth():
+    """Check if user is authenticated and get user info"""
+    try:
+        token = JWTAuthManager.extract_token_from_request()
+        
+        if not token:
+            return jsonify({
+                'authenticated': False,
+                'message': 'No token provided'
+            }), 200
+        
+        is_valid, payload = JWTAuthManager.verify_token(token)
+        
+        if not is_valid:
+            return jsonify({
+                'authenticated': False,
+                'message': 'Token invalid or expired'
+            }), 200
+        
+        user = db.get_user_by_id(int(payload.get('user_id')))
+        
+        if user:
+            return jsonify({
+                'authenticated': True,
+                'user': {
+                    'id': user['id'],
+                    'username': user['username'],
+                    'email': user['email'],
+                    'role': user['role']
+                }
+            }), 200
+        else:
+            return jsonify({
+                'authenticated': False,
+                'message': 'User not found'
+            }), 200
+    
+    except Exception as e:
+        print(f"Error in check_auth: {e}")
+        return jsonify({
+            'authenticated': False,
+            'error': str(e)
+        }), 200
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+@require_auth()
+def logout():
+    """Logout user (invalidate token on client side)"""
+    try:
+        db.add_audit_log(
+            user_id=g.user_id,
+            username=g.username,
+            action='logout',
+            resource_type='user',
+            resource_id=str(g.user_id),
+            ip_address=request.remote_addr
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Logged out successfully'
+        }), 200
+    
+    except Exception as e:
+        print(f"Error in logout: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 # ============ API ENDPOINTS ============
 
 @app.route('/api/devices', methods=['GET'])
+@require_auth()
 def get_devices():
-    """Get all devices with latest locations"""
+    """Get all devices with latest locations (requires authentication)"""
     try:
         devices = db.get_all_devices()
         
@@ -168,8 +419,9 @@ def get_device_detail(device_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/sensor/<sensor_type>', methods=['GET'])
+@require_auth()
 def get_sensor_data(sensor_type):
-    """Get latest readings for a sensor type with pagination"""
+    """Get latest readings for a sensor type with pagination (requires authentication)"""
     try:
         limit = request.args.get('limit', 100, type=int)
         offset = request.args.get('offset', 0, type=int)
@@ -194,8 +446,9 @@ def get_sensor_data(sensor_type):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/statistics', methods=['GET'])
+@require_auth()
 def get_statistics():
-    """Get statistics about devices and sensors"""
+    """Get statistics about devices and sensors (requires authentication)"""
     try:
         devices = db.get_all_devices()
         devices_with_location = [d for d in devices if d.get('latitude') and d.get('longitude')]
@@ -215,8 +468,9 @@ def get_statistics():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/sensor-history', methods=['GET'])
+@require_auth()
 def get_sensor_history():
-    """Get sensor readings with advanced filtering and pagination
+    """Get sensor readings with advanced filtering and pagination (requires authentication)
     
     Query Parameters:
     - sensor_type: Type of sensor (tilt, vibration, displacement, rainfall, temperature, gnss)
@@ -255,8 +509,9 @@ def get_sensor_history():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/export/csv', methods=['GET'])
+@require_auth(allowed_roles=['admin', 'operator'])
 def export_sensor_csv():
-    """Export sensor data as CSV file
+    """Export sensor data as CSV file (admin/operator only)
     
     Query Parameters:
     - sensor_type: Type of sensor (required)
@@ -327,8 +582,9 @@ def export_sensor_csv():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/export/json', methods=['GET'])
+@require_auth(allowed_roles=['admin', 'operator'])
 def export_sensor_json():
-    """Export sensor data as JSON file
+    """Export sensor data as JSON file (admin/operator only)
     
     Query Parameters:
     - sensor_type: Type of sensor (required)
@@ -444,39 +700,6 @@ def auto_login():
             },
             'token': 'demo_token'
         })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-    """Login endpoint"""
-    try:
-        data = request.json
-        username = data.get('username', '')
-        password = data.get('password', '')
-        
-        # For now, accept any username/password combination
-        # In production, you would validate against a user database
-        if username and password:
-            return jsonify({
-                'success': True,
-                'user': {
-                    'id': username,
-                    'username': username,
-                    'role': 'admin'
-                },
-                'token': 'demo_token'
-            })
-        else:
-            return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/auth/logout', methods=['POST'])
-def logout():
-    """Logout endpoint"""
-    try:
-        return jsonify({'success': True, 'message': 'Logged out successfully'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

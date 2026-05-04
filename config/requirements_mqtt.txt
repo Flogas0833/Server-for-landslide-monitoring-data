@@ -5,9 +5,11 @@ paho-mqtt==1.6.1
 flask==2.3.0
 flask-cors==4.0.0
 
-# Environment Configuration
+# Authentication & Security
+PyJWT==2.8.0
 python-dotenv==0.19.0
 
 # Optional but recommended:
 # werkzeug==2.3.0     # WSGI utility library
 # jinja2==3.1.2       # Template engine
+# bcrypt==4.0.1       # Better password hashing (alternative to sha256)

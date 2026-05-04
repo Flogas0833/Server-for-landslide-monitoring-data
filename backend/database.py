@@ -13,8 +13,13 @@ import os
 class SensorDatabase:
     """SQLite database for sensor readings"""
     
-    def __init__(self, db_path: str = "../database/sensors.db"):
+    def __init__(self, db_path: str = None):
         """Initialize database"""
+        if db_path is None:
+            # Use absolute path from environment or project root
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            db_path = os.path.join(project_root, 'database', 'sensors.db')
+        
         self.db_path = db_path
         os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
         self.init_database()
@@ -68,10 +73,46 @@ class SensorDatabase:
             )
         ''')
         
+        # Users table for authentication
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT DEFAULT 'viewer',
+                site_ids TEXT,
+                is_active INTEGER DEFAULT 1,
+                last_login TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Audit logs table for tracking actions
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                username TEXT,
+                action TEXT,
+                resource_type TEXT,
+                resource_id TEXT,
+                old_values TEXT,
+                new_values TEXT,
+                ip_address TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+        ''')
+        
         # Create indexes for better queries
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_device_id ON sensor_readings(device_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_sensor_type ON sensor_readings(sensor_type)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON sensor_readings(timestamp)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_username ON users(username)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)')
         
         conn.commit()
         conn.close()
@@ -378,3 +419,174 @@ class SensorDatabase:
         conn.close()
         
         return results
+    
+    # ============ USER MANAGEMENT ============
+    
+    def create_user(self, username: str, email: str, password_hash: str, 
+                   role: str = 'viewer', site_ids: Optional[list] = None) -> bool:
+        """Create a new user"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            site_ids_json = json.dumps(site_ids) if site_ids else json.dumps([])
+            
+            cursor.execute('''
+                INSERT INTO users (username, email, password_hash, role, site_ids)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (username, email, password_hash, role, site_ids_json))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error creating user: {e}")
+            return False
+    
+    def get_user_by_username(self, username: str) -> Optional[Dict]:
+        """Get user by username"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, username, email, password_hash, role, site_ids, is_active, last_login, created_at
+                FROM users
+                WHERE username = ?
+            ''', (username,))
+            
+            row = cursor.fetchone()
+            conn.close()
+            
+            if row:
+                user = dict(row)
+                if user.get('site_ids'):
+                    user['site_ids'] = json.loads(user['site_ids'])
+                return user
+            
+            return None
+        except Exception as e:
+            print(f"Error getting user: {e}")
+            return None
+    
+    def get_user_by_id(self, user_id: int) -> Optional[Dict]:
+        """Get user by ID"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, username, email, role, site_ids, is_active, last_login, created_at
+                FROM users
+                WHERE id = ?
+            ''', (user_id,))
+            
+            row = cursor.fetchone()
+            conn.close()
+            
+            if row:
+                user = dict(row)
+                if user.get('site_ids'):
+                    user['site_ids'] = json.loads(user['site_ids'])
+                return user
+            
+            return None
+        except Exception as e:
+            print(f"Error getting user: {e}")
+            return None
+    
+    def update_user_last_login(self, user_id: int) -> bool:
+        """Update user's last login timestamp"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE users
+                SET last_login = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (user_id,))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error updating last login: {e}")
+            return False
+    
+    def add_audit_log(self, user_id: Optional[int], username: str, action: str,
+                     resource_type: str, resource_id: str, ip_address: str,
+                     old_values: Optional[Dict] = None, new_values: Optional[Dict] = None) -> bool:
+        """Add entry to audit log"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            old_vals_json = json.dumps(old_values) if old_values else None
+            new_vals_json = json.dumps(new_values) if new_values else None
+            
+            cursor.execute('''
+                INSERT INTO audit_logs (user_id, username, action, resource_type, resource_id, ip_address, old_values, new_values)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (user_id, username, action, resource_type, resource_id, ip_address, old_vals_json, new_vals_json))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error adding audit log: {e}")
+            return False
+    
+    def get_audit_logs(self, limit: int = 100, offset: int = 0, 
+                      user_id: Optional[int] = None) -> Dict[str, Any]:
+        """Get audit logs with pagination"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            conditions = []
+            params = []
+            
+            if user_id:
+                conditions.append("user_id = ?")
+                params.append(user_id)
+            
+            where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+            
+            # Get total count
+            count_query = f"SELECT COUNT(*) as total FROM audit_logs {where_clause}"
+            cursor.execute(count_query, params)
+            total = cursor.fetchone()['total']
+            
+            # Get paginated results
+            query = f"""
+                SELECT id, user_id, username, action, resource_type, resource_id, ip_address, timestamp, old_values, new_values
+                FROM audit_logs
+                {where_clause}
+                ORDER BY timestamp DESC
+                LIMIT ? OFFSET ?
+            """
+            params.extend([limit, offset])
+            cursor.execute(query, params)
+            
+            results = [dict(row) for row in cursor.fetchall()]
+            
+            for r in results:
+                if r.get('old_values'):
+                    r['old_values'] = json.loads(r['old_values'])
+                if r.get('new_values'):
+                    r['new_values'] = json.loads(r['new_values'])
+            
+            conn.close()
+            
+            return {
+                'data': results,
+                'pagination': {
+                    'total': total,
+                    'limit': limit,
+                    'offset': offset
+                }
+            }
+        except Exception as e:
+            print(f"Error getting audit logs: {e}")
+            return {'data': [], 'pagination': {'total': 0}}
