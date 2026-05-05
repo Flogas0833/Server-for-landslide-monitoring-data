@@ -174,18 +174,6 @@ export default function LoginPage() {
                                     )}
                                 </Button>
                             </form>
-
-                            {/* Demo Credentials Info */}
-                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md space-y-2">
-                                <p className="text-sm font-medium text-blue-900 dark:text-blue-300">
-                                    Thông tin đăng nhập demo:
-                                </p>
-                                <div className="text-xs text-blue-800 dark:text-blue-400 space-y-1">
-                                    <p><strong>Admin:</strong> admin / admin123</p>
-                                    <p><strong>Operator:</strong> operator / operator123</p>
-                                    <p><strong>Viewer:</strong> viewer / viewer123</p>
-                                </div>
-                            </div>
                         </CardContent>
                     </Card>
 

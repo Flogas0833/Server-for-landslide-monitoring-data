@@ -3,8 +3,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import MapPage from './pages/MapPage';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
+import StatisticsPage from './pages/StatisticsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminAuditLogsPage from './pages/AdminAuditLogsPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Layout } from './components/Layout';
 import './App.css';
 
 // Create a client for React Query
@@ -23,22 +27,63 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+
+      {/* Protected Routes with Layout */}
       <Route
         path="/"
         element={
           <ProtectedRoute>
-            <MapPage />
+            <Layout>
+              <MapPage />
+            </Layout>
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardPage />
+            <Layout>
+              <DashboardPage />
+            </Layout>
           </ProtectedRoute>
         }
       />
+
+      <Route
+        path="/statistics"
+        element={
+          <ProtectedRoute requiredRoles={['admin', 'operator']}>
+            <Layout>
+              <StatisticsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute requiredRoles="admin">
+            <Layout>
+              <AdminUsersPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/audit-logs"
+        element={
+          <ProtectedRoute requiredRoles="admin">
+            <Layout>
+              <AdminAuditLogsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
