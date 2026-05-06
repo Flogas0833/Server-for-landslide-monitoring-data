@@ -6,6 +6,8 @@ import LoginPage from './pages/LoginPage';
 import StatisticsPage from './pages/StatisticsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminAuditLogsPage from './pages/AdminAuditLogsPage';
+import AlertsPage from './pages/AlertsPage';
+import ExportPage from './pages/ExportPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
@@ -79,6 +81,28 @@ function AppRoutes() {
           <ProtectedRoute requiredRoles="admin">
             <Layout>
               <AdminAuditLogsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/alerts"
+        element={
+          <ProtectedRoute requiredRoles={['admin', 'operator']}>
+            <Layout>
+              <AlertsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/export"
+        element={
+          <ProtectedRoute requiredRoles={['admin', 'operator']}>
+            <Layout>
+              <ExportPage />
             </Layout>
           </ProtectedRoute>
         }

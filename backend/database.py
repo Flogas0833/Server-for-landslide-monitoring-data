@@ -80,7 +80,7 @@ class SensorDatabase:
                 username TEXT UNIQUE NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
-                role TEXT DEFAULT 'viewer',
+                role TEXT DEFAULT 'user',
                 site_ids TEXT,
                 is_active INTEGER DEFAULT 1,
                 last_login TIMESTAMP,
@@ -423,7 +423,7 @@ class SensorDatabase:
     # ============ USER MANAGEMENT ============
     
     def create_user(self, username: str, email: str, password_hash: str, 
-                   role: str = 'viewer', site_ids: Optional[list] = None) -> bool:
+                   role: str = 'user', site_ids: Optional[list] = None) -> bool:
         """Create a new user"""
         try:
             conn = self.get_connection()

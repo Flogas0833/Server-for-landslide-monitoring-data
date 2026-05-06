@@ -10,7 +10,7 @@ import '../styles/sidebar.css';
 
 export const Sidebar = () => {
     const { user, logout } = useAuth();
-    const { isAdmin, isOperator, isViewer } = useRoleCheck();
+    const { isAdmin, isOperator, isUser } = useRoleCheck();
     const [isOpen, setIsOpen] = useState(false);
     const location = useLocation();
 
@@ -25,6 +25,12 @@ export const Sidebar = () => {
                 label: 'Map',
                 path: '/',
                 icon: '🗺️',
+                show: true,
+            },
+            {
+                label: 'Dashboard',
+                path: '/dashboard',
+                icon: '📊',
                 show: true,
             },
         ];

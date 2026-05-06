@@ -1,17 +1,14 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Statistics from '../components/Statistics';
 import AlertPanel from '../components/AlertPanel';
 import { SensorTable } from '../components/SensorTable';
-import UserMenu from '../components/UserMenu';
 import { Card, CardHeader, CardTitle, CardContent, Input, Button, Separator } from '../components/ui';
-import { Map, BarChart3, Filter } from 'lucide-react';
+import { BarChart3, Filter } from 'lucide-react';
 
 export default function DashboardPage() {
     const [selectedSensor, setSelectedSensor] = useState('tilt');
     const [deviceFilter, setDeviceFilter] = useState('');
     const [hoursFilter, setHoursFilter] = useState(24);
-    const navigate = useNavigate();
 
     const sensorTypes = [
         { id: 'tilt', label: 'Tilt (Nghiêng)' },
@@ -50,29 +47,14 @@ export default function DashboardPage() {
             {/* Header */}
             <header className="border-b bg-card sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <h1 className="text-3xl font-bold flex items-center gap-2">
-                                <BarChart3 className="w-8 h-8 text-primary" />
-                                Bảng Điều Khiển Giám Sát
-                            </h1>
-                            <p className="text-sm text-muted-foreground">
-                                Phân tích dữ liệu cảm biến và theo dõi cảnh báo
-                            </p>
-                        </div>
-                        <UserMenu />
-                    </div>
-
-                    <div className="flex items-center justify-between mt-4">
-                        <div></div>
-                        <Button
-                            onClick={() => navigate('/')}
-                            variant="outline"
-                            className="gap-2"
-                        >
-                            <Map className="w-4 h-4" />
-                            Xem Bản Đồ
-                        </Button>
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <BarChart3 className="w-8 h-8 text-primary" />
+                            Bảng Điều Khiển Giám Sát
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Phân tích dữ liệu cảm biến và theo dõi cảnh báo
+                        </p>
                     </div>
                 </div>
             </header>

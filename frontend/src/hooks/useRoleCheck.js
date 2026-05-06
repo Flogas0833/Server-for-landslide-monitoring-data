@@ -25,7 +25,7 @@ export const useRoleCheck = (requiredRoles) => {
         userRole: user.role,
         isAdmin: user.role === 'admin',
         isOperator: user.role === 'operator',
-        isViewer: user.role === 'viewer',
+        isUser: user.role === 'user',
     };
 };
 
@@ -43,7 +43,7 @@ export const usePermissions = () => {
 
         // View Data
         canViewAllData: user?.role === 'admin',
-        canViewOwnData: ['admin', 'operator', 'viewer'].includes(user?.role),
+        canViewOwnData: ['admin', 'operator', 'user'].includes(user?.role),
 
         // Export
         canExportData: ['admin', 'operator'].includes(user?.role),

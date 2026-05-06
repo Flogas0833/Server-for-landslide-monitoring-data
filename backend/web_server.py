@@ -106,7 +106,7 @@ def register():
             username=username,
             email=email,
             password_hash=password_hash,
-            role='viewer'  # Default role for new users
+            role='user'  # Default role for new users
         )
         
         if success:

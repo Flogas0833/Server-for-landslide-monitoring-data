@@ -33,10 +33,10 @@ def seed_database():
             'role': 'operator'
         },
         {
-            'username': 'viewer',
-            'email': 'viewer@landslide.local',
-            'password': 'viewer123',
-            'role': 'viewer'
+            'username': 'user',
+            'email': 'user@landslide.local',
+            'password': 'user123',
+            'role': 'user'
         }
     ]
     

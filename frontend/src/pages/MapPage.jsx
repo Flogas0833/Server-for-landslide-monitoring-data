@@ -1,47 +1,33 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import MapComponent from '../components/MapComponent';
 import DevicePanel from '../components/DevicePanel';
 import QueryStatus from '../components/QueryStatus';
-import UserMenu from '../components/UserMenu';
 import { useDevices, useDeviceDetail } from '../hooks/useDevices';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button, Separator } from '../components/ui';
-import { BarChart3, MapPin, Gauge } from 'lucide-react';
+import { MapPin, Gauge } from 'lucide-react';
 
 export default function MapPage() {
     const [selectedDeviceId, setSelectedDeviceId] = useState(null);
     const devicesQuery = useDevices();
     const { data: deviceDetail } = useDeviceDetail(selectedDeviceId);
-    const navigate = useNavigate();
 
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
             <header className="border-b bg-card sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <h1 className="text-3xl font-bold flex items-center gap-2">
-                                <MapPin className="w-8 h-8 text-primary" />
-                                Bản Đồ Cảm Biến Giám Sát
-                            </h1>
-                            <p className="text-sm text-muted-foreground">
-                                Theo dõi vị trí và trạng thái các thiết bị trong thời gian thực
-                            </p>
-                        </div>
-                        <UserMenu />
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <MapPin className="w-8 h-8 text-primary" />
+                            Bản Đồ Cảm Biến Giám Sát
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Theo dõi vị trí và trạng thái các thiết bị trong thời gian thực
+                        </p>
                     </div>
 
-                    <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
+                    <div className="flex items-center gap-2 mt-4">
                         <QueryStatus query={devicesQuery} label="Trạng thái thiết bị" />
-                        <Button
-                            onClick={() => navigate('/dashboard')}
-                            variant="default"
-                            className="gap-2"
-                        >
-                            <BarChart3 className="w-4 h-4" />
-                            Xem Bảng Điều Khiển
-                        </Button>
                     </div>
                 </div>
             </header>

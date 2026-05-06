@@ -30,7 +30,7 @@ class JWTAuthManager:
         Args:
             user_id: User ID
             username: Username
-            role: User role (admin, operator, viewer, device)
+            role: User role (admin, operator, user, device)
             expires_delta: Custom expiration time
         
         Returns:
@@ -181,7 +181,7 @@ class RBACManager:
             'export:data',
             'create:reports'
         ],
-        'viewer': [
+        'user': [
             'view:public_data',
             'view:devices',
             'view:alerts'

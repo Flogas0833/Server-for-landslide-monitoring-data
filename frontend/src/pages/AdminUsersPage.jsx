@@ -18,7 +18,7 @@ export const AdminUsersPage = () => {
         username: '',
         email: '',
         password: '',
-        role: 'viewer',
+        role: 'user',
     });
 
     useEffect(() => {
@@ -27,7 +27,7 @@ export const AdminUsersPage = () => {
         setUsers([
             { id: 1, username: 'admin', email: 'admin@landslide.local', role: 'admin', lastLogin: '2026-05-05' },
             { id: 2, username: 'operator', email: 'operator@landslide.local', role: 'operator', lastLogin: '2026-05-05' },
-            { id: 3, username: 'viewer', email: 'viewer@landslide.local', role: 'viewer', lastLogin: '2026-05-04' },
+            { id: 3, username: 'user', email: 'user@landslide.local', role: 'user', lastLogin: '2026-05-04' },
         ]);
         setLoading(false);
     }, []);
@@ -42,7 +42,7 @@ export const AdminUsersPage = () => {
             // TODO: Call API to create user
             console.log('Creating user:', formData);
             setShowForm(false);
-            setFormData({ username: '', email: '', password: '', role: 'viewer' });
+            setFormData({ username: '', email: '', password: '', role: 'user' });
         } catch (error) {
             console.error('Error creating user:', error);
             alert('Lỗi tạo người dùng');
@@ -111,7 +111,7 @@ export const AdminUsersPage = () => {
                             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                             className="form-select"
                         >
-                            <option value="viewer">Viewer</option>
+                            <option value="user">User</option>
                             <option value="operator">Operator</option>
                             <option value="admin">Admin</option>
                         </select>
