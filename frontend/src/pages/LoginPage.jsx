@@ -116,12 +116,12 @@ export default function LoginPage() {
                                 {/* Username Field */}
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-foreground">
-                                        Username
+                                        Tên Đăng Nhập
                                     </label>
                                     <Input
                                         type="text"
                                         name="username"
-                                        placeholder="Nhập username"
+                                        placeholder="Nhập tên đăng nhập"
                                         value={formData.username}
                                         onChange={handleInputChange}
                                         disabled={isLoading}
@@ -132,13 +132,13 @@ export default function LoginPage() {
                                 {/* Password Field */}
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-foreground">
-                                        Password
+                                        Mật Khẩu
                                     </label>
                                     <div className="relative">
                                         <Input
                                             type={showPassword ? 'text' : 'password'}
                                             name="password"
-                                            placeholder="Nhập password"
+                                            placeholder="Nhập mật khẩu"
                                             value={formData.password}
                                             onChange={handleInputChange}
                                             disabled={isLoading}

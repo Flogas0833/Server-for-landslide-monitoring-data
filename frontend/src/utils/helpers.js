@@ -85,3 +85,51 @@ export const formatValue = (value, decimals = 2) => {
     if (value === null || value === undefined) return '-';
     return typeof value === 'number' ? value.toFixed(decimals) : value;
 };
+
+/**
+ * Translate role to Vietnamese
+ */
+export const translateRole = (role) => {
+    const roleMap = {
+        'user': 'Người Dùng',
+        'operator': 'Nhân Viên Vận Hành',
+        'admin': 'Quản Trị Viên',
+    };
+    return roleMap[role] || role;
+};
+
+/**
+ * Translate audit action to Vietnamese
+ */
+export const translateAction = (action) => {
+    const actionMap = {
+        'login_success': 'Đăng nhập thành công',
+        'login_failed': 'Đăng nhập thất bại',
+        'logout': 'Đăng xuất',
+        'export_data': 'Xuất dữ liệu',
+        'import_data': 'Nhập dữ liệu',
+        'user_created': 'Tạo người dùng',
+        'user_updated': 'Cập nhật người dùng',
+        'user_deleted': 'Xóa người dùng',
+        'device_created': 'Tạo thiết bị',
+        'device_updated': 'Cập nhật thiết bị',
+        'device_deleted': 'Xóa thiết bị',
+        'alert_acknowledged': 'Xác nhận cảnh báo',
+        'settings_changed': 'Thay đổi cài đặt',
+    };
+    return actionMap[action] || action.replace(/_/g, ' ');
+};
+
+/**
+ * Translate resource type to Vietnamese
+ */
+export const translateResourceType = (type) => {
+    const typeMap = {
+        'user': 'Người dùng',
+        'sensor': 'Cảm biến',
+        'device': 'Thiết bị',
+        'alert': 'Cảnh báo',
+        'system': 'Hệ thống',
+    };
+    return typeMap[type] || type;
+};

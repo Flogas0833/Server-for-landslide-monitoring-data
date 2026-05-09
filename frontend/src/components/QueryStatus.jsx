@@ -27,14 +27,14 @@ export default function QueryStatus({ query }) {
             {isLoading && (
                 <Badge variant="secondary" className="flex items-center gap-1">
                     <Clock className="w-3 h-3 animate-spin" />
-                    Loading...
+                    Đang Tải...
                 </Badge>
             )}
 
             {isFetching && !isLoading && (
                 <Badge variant="secondary" className="flex items-center gap-1">
                     <RotateCw className="w-3 h-3 animate-spin" />
-                    Updating...
+                    Đang Cập Nhật...
                 </Badge>
             )}
 
@@ -47,14 +47,14 @@ export default function QueryStatus({ query }) {
             {error && (
                 <Badge variant="destructive" className="flex items-center gap-1" title={error.message}>
                     <AlertCircle className="w-3 h-3" />
-                    Error
+                    Lỗi
                 </Badge>
             )}
 
             {data && !error && !isFetching && (
                 <Badge variant="default" className="flex items-center gap-1">
                     <CheckCircle className="w-3 h-3" />
-                    Ready
+                    Sẵn Sàng
                 </Badge>
             )}
         </div>

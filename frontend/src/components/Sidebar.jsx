@@ -6,6 +6,7 @@ import { Menu, X, LogOut, BarChart3, Users, FileText, AlertCircle, Settings, Log
 import { Button } from './ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from './ui/card';
 import { Badge } from './ui/badge';
+import { translateRole } from '../utils/helpers';
 import '../styles/sidebar.css';
 
 export const Sidebar = () => {
@@ -22,13 +23,13 @@ export const Sidebar = () => {
     const getMenuItems = () => {
         const baseMenu = [
             {
-                label: 'Map',
+                label: 'Bản Đồ',
                 path: '/',
                 icon: '🗺️',
                 show: true,
             },
             {
-                label: 'Dashboard',
+                label: 'Bảng Điều Khiển',
                 path: '/dashboard',
                 icon: '📊',
                 show: true,
@@ -37,41 +38,32 @@ export const Sidebar = () => {
 
         const adminMenu = [
             {
-                label: 'Statistics',
+                label: 'Thống Kê',
                 path: '/statistics',
                 icon: <BarChart3 size={20} />,
                 show: isAdmin,
             },
             {
-                label: 'Users',
+                label: 'Người Dùng',
                 path: '/admin/users',
                 icon: <Users size={20} />,
                 show: isAdmin,
             },
             {
-                label: 'Audit Logs',
+                label: 'Nhật Ký Hoạt Động',
                 path: '/admin/audit-logs',
                 icon: <FileText size={20} />,
                 show: isAdmin,
             },
             {
-                label: 'Alerts',
+                label: 'Cảnh Báo',
                 path: '/admin/alerts',
                 icon: <AlertCircle size={20} />,
                 show: isAdmin || isOperator,
             },
         ];
 
-        const exportMenu = [
-            {
-                label: 'Export',
-                path: '/export',
-                icon: <Settings size={20} />,
-                show: isAdmin || isOperator,
-            },
-        ];
-
-        return [...baseMenu, ...adminMenu, ...exportMenu].filter(item => item.show);
+        return [...baseMenu, ...adminMenu].filter(item => item.show);
     };
 
     const menuItems = getMenuItems();
@@ -123,7 +115,7 @@ export const Sidebar = () => {
                                 <div className="user-details flex-1">
                                     <p className="user-name font-semibold text-sm">{user.username}</p>
                                     <Badge variant="outline" className="user-role mt-1">
-                                        {user.role}
+                                        {translateRole(user.role)}
                                     </Badge>
                                 </div>
                             </div>
@@ -166,7 +158,7 @@ export const Sidebar = () => {
                                 }}
                             >
                                 <LogOut size={18} />
-                                <span>Logout</span>
+                                <span>Đăng Xuất</span>
                             </Button>
                         )}
                     </CardFooter>

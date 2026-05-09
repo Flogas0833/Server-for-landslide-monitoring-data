@@ -53,7 +53,7 @@ export default function AlertPanel() {
                         <div className="space-y-2">
                             <div className="flex items-start justify-between">
                                 <AlertTitle className="font-semibold">
-                                    {alert.sensor_type || 'Unknown'}
+                                    {alert.sensor_type || 'Không Xác Định'}
                                 </AlertTitle>
                                 <Badge variant={getAlertVariant(alert.danger_level)}>
                                     {alert.danger_level}
@@ -64,7 +64,7 @@ export default function AlertPanel() {
                             </AlertDescription>
                             <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
                                 <div className="space-y-0.5">
-                                    <p>Device: <span className="font-mono">{alert.device_id}</span></p>
+                                    <p>Thiết Bị: <span className="font-mono">{alert.device_id}</span></p>
                                     <p>Lúc: {formatTime(alert.triggered_at)}</p>
                                 </div>
                                 {!alert.acknowledged_at && (

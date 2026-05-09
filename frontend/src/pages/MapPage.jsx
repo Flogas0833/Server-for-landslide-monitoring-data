@@ -15,7 +15,7 @@ export default function MapPage() {
         <div className="min-h-screen bg-background">
             {/* Header */}
             <header className="border-b bg-card sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 py-4">
+                <div className="px-4 py-4">
                     <div className="space-y-1">
                         <h1 className="text-3xl font-bold flex items-center gap-2">
                             <MapPin className="w-8 h-8 text-primary" />
@@ -33,7 +33,7 @@ export default function MapPage() {
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto p-4" style={{ height: 'calc(100vh - 180px)' }}>
+            <main className="p-4" style={{ height: 'calc(100vh - 180px)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1rem', height: '100%' }}>
                     {/* Map Section */}
                     <div style={{ height: '100%', borderRadius: '0.5rem', border: '1px solid #ccc', backgroundColor: '#fff', overflow: 'hidden' }}>
@@ -86,19 +86,19 @@ export default function MapPage() {
 
                                                 {deviceDetail.readings.tilt?.[0] && (
                                                     <div className="bg-muted p-2 rounded">
-                                                        <Badge className="mb-1">Tilt</Badge>
+                                                        <Badge className="mb-1">Tilt (Nghịeng)</Badge>
                                                         <p className="text-xs">
-                                                            Roll: <span className="font-mono">{deviceDetail.readings.tilt[0].data?.roll}°</span>
+                                                            Gọc Ngang: <span className="font-mono">{deviceDetail.readings.tilt[0].data?.roll}°</span>
                                                         </p>
                                                         <p className="text-xs">
-                                                            Pitch: <span className="font-mono">{deviceDetail.readings.tilt[0].data?.pitch}°</span>
+                                                            Gọc Dọc: <span className="font-mono">{deviceDetail.readings.tilt[0].data?.pitch}°</span>
                                                         </p>
                                                     </div>
                                                 )}
 
                                                 {deviceDetail.readings.vibration?.[0] && (
                                                     <div className="bg-muted p-2 rounded">
-                                                        <Badge className="mb-1">Vibration</Badge>
+                                                        <Badge className="mb-1">Vibration (Rung)</Badge>
                                                         <p className="text-xs">
                                                             {deviceDetail.readings.vibration[0].data?.frequency}
                                                             <span className="text-muted-foreground"> Hz</span>
@@ -108,7 +108,7 @@ export default function MapPage() {
 
                                                 {deviceDetail.readings.displacement?.[0] && (
                                                     <div className="bg-muted p-2 rounded">
-                                                        <Badge className="mb-1">Displacement</Badge>
+                                                        <Badge className="mb-1">Displacement (Chuyển vị)</Badge>
                                                         <p className="text-xs">
                                                             {deviceDetail.readings.displacement[0].data?.cumulative}
                                                             <span className="text-muted-foreground"> mm</span>

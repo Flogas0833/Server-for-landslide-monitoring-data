@@ -3,12 +3,12 @@ import Statistics from '../components/Statistics';
 import AlertPanel from '../components/AlertPanel';
 import { SensorTable } from '../components/SensorTable';
 import { Card, CardHeader, CardTitle, CardContent, Input, Button, Separator } from '../components/ui';
-import { BarChart3, Filter } from 'lucide-react';
+import { BarChart3, Filter, Download } from 'lucide-react';
 
 export default function DashboardPage() {
     const [selectedSensor, setSelectedSensor] = useState('tilt');
     const [deviceFilter, setDeviceFilter] = useState('');
-    const [hoursFilter, setHoursFilter] = useState(24);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
     const sensorTypes = [
         { id: 'tilt', label: 'Tilt (Nghiêng)' },
@@ -18,17 +18,10 @@ export default function DashboardPage() {
         { id: 'temperature', label: 'Temperature (Nhiệt độ)' },
     ];
 
-    const timeOptions = [
-        { value: 1, label: '1 giờ' },
-        { value: 6, label: '6 giờ' },
-        { value: 12, label: '12 giờ' },
-        { value: 24, label: '24 giờ' },
-        { value: 168, label: '1 tuần' },
-    ];
-
     const calculateDateRange = () => {
-        const endDate = new Date();
-        const startDate = new Date(endDate.getTime() - hoursFilter * 60 * 60 * 1000);
+        const date = new Date(selectedDate);
+        const startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+        const endDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
         return {
             start_date: startDate.toISOString(),
             end_date: endDate.toISOString(),
@@ -37,16 +30,26 @@ export default function DashboardPage() {
 
     const dateRange = calculateDateRange();
     const params = {
-        limit: 50,
+        limit: 9999999,
         device_id: deviceFilter || undefined,
         ...dateRange,
+    };
+
+    const handleExportExcel = () => {
+        const queryParams = new URLSearchParams({
+            sensor_type: selectedSensor,
+            ...(deviceFilter && { device_id: deviceFilter }),
+            start_date: dateRange.start_date,
+            end_date: dateRange.end_date,
+        });
+        window.open(`/api/sensors/export?${queryParams.toString()}`, '_blank');
     };
 
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
             <header className="border-b bg-card sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 py-4">
+                <div className="px-4 py-4">
                     <div className="space-y-1">
                         <h1 className="text-3xl font-bold flex items-center gap-2">
                             <BarChart3 className="w-8 h-8 text-primary" />
@@ -60,7 +63,7 @@ export default function DashboardPage() {
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto p-4 space-y-6">
+            <main className="p-4 space-y-6">
                 {/* Statistics Section */}
                 <Statistics />
 
@@ -73,9 +76,18 @@ export default function DashboardPage() {
 
                 {/* Data Table Section */}
                 <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <Filter className="w-5 h-5 text-primary" />
-                        <h2 className="text-2xl font-bold">Bộ Lọc Dữ Liệu</h2>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Filter className="w-5 h-5 text-primary" />
+                            <h2 className="text-2xl font-bold">Bộ Lọc Dữ Liệu</h2>
+                        </div>
+                        <Button
+                            onClick={handleExportExcel}
+                            className="flex items-center gap-2"
+                        >
+                            <Download className="w-4 h-4" />
+                            Xuất Excel
+                        </Button>
                     </div>
 
                     <Card>
@@ -108,20 +120,14 @@ export default function DashboardPage() {
                                     />
                                 </div>
 
-                                {/* Time Range Select */}
+                                {/* Date Select */}
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Khoảng Thời Gian</label>
-                                    <select
-                                        value={hoursFilter}
-                                        onChange={(e) => setHoursFilter(parseInt(e.target.value))}
-                                        className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
-                                    >
-                                        {timeOptions.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <label className="text-sm font-medium">Chọn Ngày</label>
+                                    <Input
+                                        type="date"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                    />
                                 </div>
                             </div>
                         </CardContent>

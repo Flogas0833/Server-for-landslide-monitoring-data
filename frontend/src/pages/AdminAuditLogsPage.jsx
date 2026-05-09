@@ -4,6 +4,7 @@ import { usePermissions } from '../hooks/useRoleCheck';
 import axios from 'axios';
 import { FileText, Shield } from 'lucide-react';
 import { Card } from '../components/ui/card';
+import { translateAction, translateResourceType } from '../utils/helpers';
 import '../styles/adminPages.css';
 
 export const AdminAuditLogsPage = () => {
@@ -86,10 +87,10 @@ export const AdminAuditLogsPage = () => {
                                     <td>{log.username}</td>
                                     <td>
                                         <span className="action-badge">
-                                            {log.action.replace(/_/g, ' ')}
+                                            {translateAction(log.action)}
                                         </span>
                                     </td>
-                                    <td>{log.resource_type}</td>
+                                    <td>{translateResourceType(log.resource_type)}</td>
                                     <td>{new Date(log.timestamp).toLocaleString('vi-VN')}</td>
                                     <td className="mono">{log.ip_address}</td>
                                 </tr>

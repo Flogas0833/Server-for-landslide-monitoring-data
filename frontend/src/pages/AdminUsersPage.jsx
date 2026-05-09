@@ -6,6 +6,7 @@ import { Users, Plus, Trash2, Shield } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { translateRole } from '../utils/helpers';
 import '../styles/adminPages.css';
 
 export const AdminUsersPage = () => {
@@ -105,15 +106,15 @@ export const AdminUsersPage = () => {
                         />
                     </div>
                     <div className="form-group">
-                        <label>Role</label>
+                        <label>Vai Trò</label>
                         <select
                             value={formData.role}
                             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                             className="form-select"
                         >
-                            <option value="user">User</option>
-                            <option value="operator">Operator</option>
-                            <option value="admin">Admin</option>
+                            <option value="user">Người Dùng</option>
+                            <option value="operator">Nhân Viên Vận Hành</option>
+                            <option value="admin">Quản Trị Viên</option>
                         </select>
                     </div>
                     <div className="form-actions">
@@ -131,9 +132,9 @@ export const AdminUsersPage = () => {
                     <table className="users-table">
                         <thead>
                             <tr>
-                                <th>Username</th>
+                                <th>Tên Đăng Nhập</th>
                                 <th>Email</th>
-                                <th>Role</th>
+                                <th>Vai Trò</th>
                                 <th>Lần Đăng Nhập Cuối</th>
                                 <th>Hành Động</th>
                             </tr>
@@ -145,7 +146,7 @@ export const AdminUsersPage = () => {
                                     <td>{user.email}</td>
                                     <td>
                                         <span className={`role-badge role-${user.role}`}>
-                                            {user.role}
+                                            {translateRole(user.role)}
                                         </span>
                                     </td>
                                     <td>{user.lastLogin}</td>
