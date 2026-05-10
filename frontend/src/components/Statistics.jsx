@@ -1,4 +1,3 @@
-import QueryStatus from './QueryStatus';
 import { useStatistics } from '../hooks/useSensors';
 import { useAlertStats } from '../hooks/useAlerts';
 import { Card, CardContent } from './ui';
@@ -28,10 +27,6 @@ export default function Statistics() {
 
     return (
         <div className="space-y-4">
-            <div className="flex gap-2 flex-wrap">
-                <QueryStatus query={statsQuery} label="Statistics" />
-                <QueryStatus query={alertsQuery} label="Alerts" />
-            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     icon={Satellite}

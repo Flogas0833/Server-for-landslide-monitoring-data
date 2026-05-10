@@ -8,7 +8,6 @@ import {
     useReactTable,
 } from '@tanstack/react-table';
 import { useSensorData } from '../hooks/useSensors';
-import QueryStatus from './QueryStatus';
 import { formatTime, formatValue } from '../utils/helpers';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Card, CardHeader, CardTitle, CardContent, Button, Loader } from './ui';
 import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -174,7 +173,6 @@ function TableRenderer({ table, query, isLoading }) {
         <Card className="w-full">
             <CardHeader>
                 <CardTitle>Dữ Liệu Cảm Biến</CardTitle>
-                <QueryStatus query={query} label="Trạng thái" />
             </CardHeader>
 
             <CardContent>

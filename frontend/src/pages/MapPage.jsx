@@ -14,7 +14,7 @@ export default function MapPage() {
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
-            <header className="border-b bg-card sticky top-0 z-40">
+            <header className="border-b bg-card py-4 mb-4">
                 <div className="px-4 py-4">
                     <div className="space-y-1">
                         <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -27,7 +27,7 @@ export default function MapPage() {
                     </div>
 
                     <div className="flex items-center gap-2 mt-4">
-                        <QueryStatus query={devicesQuery} label="Trạng thái thiết bị" />
+                        <QueryStatus query={devicesQuery} label="Trạng thái thiết bị" verbose={true} />
                     </div>
                 </div>
             </header>

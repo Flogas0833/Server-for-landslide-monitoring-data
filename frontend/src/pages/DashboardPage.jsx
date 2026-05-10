@@ -2,13 +2,16 @@ import { useState } from 'react';
 import Statistics from '../components/Statistics';
 import AlertPanel from '../components/AlertPanel';
 import { SensorTable } from '../components/SensorTable';
+import QueryStatus from '../components/QueryStatus';
 import { Card, CardHeader, CardTitle, CardContent, Input, Button, Separator } from '../components/ui';
+import { useStatistics } from '../hooks/useSensors';
 import { BarChart3, Filter, Download } from 'lucide-react';
 
 export default function DashboardPage() {
     const [selectedSensor, setSelectedSensor] = useState('tilt');
     const [deviceFilter, setDeviceFilter] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const statsQuery = useStatistics();
 
     const sensorTypes = [
         { id: 'tilt', label: 'Tilt (Nghiêng)' },
@@ -48,7 +51,7 @@ export default function DashboardPage() {
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
-            <header className="border-b bg-card sticky top-0 z-40">
+            <header className="border-b bg-card py-4 mb-4">
                 <div className="px-4 py-4">
                     <div className="space-y-1">
                         <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -58,6 +61,10 @@ export default function DashboardPage() {
                         <p className="text-sm text-muted-foreground">
                             Phân tích dữ liệu cảm biến và theo dõi cảnh báo
                         </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-4">
+                        <QueryStatus query={statsQuery} label="Trạng thái dữ liệu" verbose={true} />
                     </div>
                 </div>
             </header>
