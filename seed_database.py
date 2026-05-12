@@ -24,19 +24,22 @@ def seed_database():
             'username': 'admin',
             'email': 'admin@landslide.local',
             'password': 'admin123',
-            'role': 'admin'
+            'role': 'admin',
+            'province': None
         },
         {
             'username': 'operator',
             'email': 'operator@landslide.local',
             'password': 'operator123',
-            'role': 'operator'
+            'role': 'operator',
+            'province': 'Hà Nội'
         },
         {
             'username': 'user',
             'email': 'user@landslide.local',
             'password': 'user123',
-            'role': 'user'
+            'role': 'user',
+            'province': None
         }
     ]
     
@@ -61,6 +64,7 @@ def seed_database():
         email = user_data['email']
         password = user_data['password']
         role = user_data['role']
+        province = user_data.get('province')
         
         # Hash password and create user
         password_hash = JWTAuthManager.hash_password(password)
@@ -68,13 +72,15 @@ def seed_database():
             username=username,
             email=email,
             password_hash=password_hash,
-            role=role
+            role=role,
+            province=province
         )
         
         if success:
             print(f"✅ Created user: {username}")
             print(f"   - Email: {email}")
             print(f"   - Role: {role}")
+            print(f"   - Province: {province or 'N/A'}")
             print(f"   - Password: {password}")
             print()
         else:

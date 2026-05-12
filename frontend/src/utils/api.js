@@ -60,6 +60,13 @@ export const deviceAPI = {
         const { data } = await api.post('/api/register-device', deviceData);
         return data;
     },
+
+    getDevicesByProvince: async (province) => {
+        const { data } = await api.get('/api/devices/by-province', {
+            params: { province }
+        });
+        return data;
+    },
 };
 
 // Sensor APIs
@@ -107,6 +114,24 @@ export const alertAPI = {
         return data;
     },
 
+    getThresholdsPublic: async () => {
+        const { data } = await api.get('/api/alerts/thresholds/public');
+        return data;
+    },
+
+    getThresholdsDetails: async () => {
+        try {
+            // Try authenticated endpoint first
+            const { data } = await api.get('/api/alerts/thresholds/details');
+            return data;
+        } catch (error) {
+            // Fallback to public endpoint
+            console.log('Falling back to public threshold endpoint');
+            const { data } = await api.get('/api/alerts/thresholds/public');
+            return data;
+        }
+    },
+
     updateThreshold: async (sensor_type, threshold_name, value) => {
         const { data } = await api.post('/api/alerts/thresholds', {
             sensor_type,
@@ -115,18 +140,62 @@ export const alertAPI = {
         });
         return data;
     },
-};
 
-// Export APIs
-export const exportAPI = {
-    exportCSV: async (params = {}) => {
-        const response = await api.get('/api/export/csv', { params, responseType: 'blob' });
-        return response.data;
+    resetThresholds: async () => {
+        const { data } = await api.post('/api/alerts/thresholds/reset');
+        return data;
     },
 
-    exportJSON: async (params = {}) => {
-        const response = await api.get('/api/export/json', { params, responseType: 'json' });
-        return response.data;
+    getAlertsByProvince: async (province, params = {}) => {
+        const { data } = await api.get('/api/alerts/by-province', {
+            params: { ...params, province }
+        });
+        return data;
+    },
+
+    getThresholdsByProvince: async (province, params = {}) => {
+        const { data } = await api.get('/api/alerts/thresholds/by-province', {
+            params: { ...params, province }
+        });
+        return data;
+    },
+
+    updateThresholdByProvince: async (province, sensor_type, threshold_name, value) => {
+        const { data } = await api.post('/api/alerts/thresholds/by-province', {
+            province,
+            sensor_type,
+            threshold_name,
+            value,
+        });
+        return data;
+    },
+};
+
+// User APIs
+export const userAPI = {
+    getAllUsers: async () => {
+        const { data } = await api.get('/api/users');
+        return data.users || [];
+    },
+
+    getCurrentUser: async () => {
+        const { data } = await api.get('/api/users/me');
+        return data;
+    },
+
+    createUser: async (userData) => {
+        const { data } = await api.post('/api/users', userData);
+        return data;
+    },
+
+    updateUserProvince: async (province) => {
+        const { data } = await api.put('/api/users/me/province', { province });
+        return data;
+    },
+
+    updateUserProvinceById: async (userId, province) => {
+        const { data } = await api.put(`/api/users/${userId}/province`, { province });
+        return data;
     },
 };
 

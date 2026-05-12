@@ -18,3 +18,4 @@ export {
 } from './dialog'
 export { Loader } from './loader'
 export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell } from './table'
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './tooltip'

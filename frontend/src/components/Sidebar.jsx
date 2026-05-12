@@ -44,7 +44,7 @@ export const Sidebar = () => {
                 show: isAdmin,
             },
             {
-                label: 'Người Dùng',
+                label: 'Quản Lý Người Dùng',
                 path: '/admin/users',
                 icon: <Users size={20} />,
                 show: isAdmin,
@@ -59,6 +59,12 @@ export const Sidebar = () => {
                 label: 'Cảnh Báo',
                 path: '/admin/alerts',
                 icon: <AlertCircle size={20} />,
+                show: isAdmin || isOperator,
+            },
+            {
+                label: 'Ngưỡng Cảnh Báo',
+                path: '/admin/thresholds',
+                icon: <Settings size={20} />,
                 show: isAdmin || isOperator,
             },
         ];

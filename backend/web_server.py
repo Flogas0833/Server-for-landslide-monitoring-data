@@ -61,12 +61,33 @@ print(f"DEBUG: REACT_BUILD_MODE = {REACT_BUILD_MODE}, REACT_DEV_MODE = {REACT_DE
 # Initialize Flask app
 if REACT_BUILD_MODE:
     print("ℹ️ Using React BUILD mode (static files from dist/)")
-    app = Flask(__name__, static_folder=REACT_BUILD_DIR, static_url_path='/')
+    # Don't use Flask's static_url_path='/' as it conflicts with SPA routing
+    # We handle static files manually in the routes
+    app = Flask(__name__)
 else:
     print("ℹ️ Using React DEV mode (proxying to dev server)")
-    app = Flask(__name__, static_url_path='/')
+    app = Flask(__name__)
 
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:5173", "http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
+
+# Handle CORS preflight requests
+@app.before_request
+def handle_preflight():
+    """Handle CORS preflight requests"""
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response, 200
 
 # Initialize database
 db = SensorDatabase()
@@ -710,7 +731,8 @@ def get_alerts():
     """Get current active alerts"""
     try:
         danger_level = request.args.get('level', None, type=str)
-        alerts = alert_manager.get_active_alerts(danger_level=danger_level)
+        limit = request.args.get('limit', -1, type=int)
+        alerts = alert_manager.get_active_alerts(danger_level=danger_level, limit=limit)
         
         return jsonify({
             'alerts': alerts,
@@ -766,7 +788,7 @@ def get_alert_stats():
 
 @app.route('/api/alerts/thresholds', methods=['GET'])
 def get_thresholds():
-    """Get alert thresholds"""
+    """Get alert thresholds (Public endpoint)"""
     try:
         sensor_type = request.args.get('sensor_type', None, type=str)
         thresholds = alert_manager.get_thresholds(sensor_type=sensor_type)
@@ -778,9 +800,25 @@ def get_thresholds():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/alerts/thresholds/public', methods=['GET'])
+def get_thresholds_public():
+    """Get alert thresholds with basic info (Public endpoint - no auth required)"""
+    try:
+        # Get current thresholds from database
+        thresholds_from_db = alert_manager.get_all_thresholds_from_db()
+        
+        return jsonify({
+            'thresholds': thresholds_from_db,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/alerts/thresholds', methods=['POST'])
+@require_auth()
+@require_role('admin', 'operator')
 def update_threshold():
-    """Update an alert threshold"""
+    """Update an alert threshold (Admin/Operator only)"""
     try:
         data = request.json
         sensor_type = data.get('sensor_type')
@@ -793,6 +831,16 @@ def update_threshold():
         success = alert_manager.update_threshold(sensor_type, threshold_name, float(value))
         
         if success:
+            # Log audit
+            db.add_audit_log(
+                user_id=g.user_id,
+                username=g.username,
+                action='update_threshold',
+                resource_type='alert_thresholds',
+                resource_id=f'{sensor_type}:{threshold_name}',
+                ip_address=request.remote_addr
+            )
+            
             return jsonify({
                 'message': 'Threshold updated',
                 'sensor_type': sensor_type,
@@ -801,6 +849,49 @@ def update_threshold():
             })
         else:
             return jsonify({'error': 'Failed to update threshold'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/thresholds/reset', methods=['POST'])
+@require_auth()
+@require_role('admin')
+def reset_thresholds():
+    """Reset all alert thresholds to default values (Admin only)"""
+    try:
+        success = alert_manager.reset_thresholds()
+        
+        if success:
+            # Log audit
+            db.add_audit_log(
+                user_id=g.user_id,
+                username=g.username,
+                action='reset_thresholds',
+                resource_type='alert_thresholds',
+                resource_id='all',
+                ip_address=request.remote_addr
+            )
+            
+            return jsonify({
+                'message': 'All thresholds reset to default values',
+                'thresholds': alert_manager.get_thresholds()
+            })
+        else:
+            return jsonify({'error': 'Failed to reset thresholds'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/thresholds/details', methods=['GET'])
+@require_auth()
+@require_role('admin', 'operator')
+def get_thresholds_details():
+    """Get detailed thresholds with metadata (Admin/Operator only)"""
+    try:
+        thresholds = alert_manager.get_all_thresholds_from_db()
+        
+        return jsonify({
+            'thresholds': thresholds,
+            'timestamp': datetime.now().isoformat()
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -849,18 +940,369 @@ elif REACT_BUILD_MODE:
     @app.route('/<path:path>')
     def serve_react(path):
         """Serve React app for all non-API routes (SPA routing)"""
+        print(f"DEBUG serve_react: path={path}, has_dot={('.' in path)}")
         if '.' in path:
             file_path = os.path.join(REACT_BUILD_DIR, path)
+            print(f"  Checking file: {file_path}, exists={os.path.exists(file_path)}")
             if os.path.exists(file_path):
                 return send_from_directory(REACT_BUILD_DIR, path)
         
         index_path = os.path.join(REACT_BUILD_DIR, 'index.html')
+        print(f"  Returning index.html from {REACT_BUILD_DIR}, exists={os.path.exists(index_path)}")
         if os.path.exists(index_path):
             return send_from_directory(REACT_BUILD_DIR, 'index.html')
         
         return jsonify({'error': 'React build not found. Run: cd frontend && npm run build'}), 404
 
+# ============ PROVINCE-SPECIFIC ENDPOINTS ============
 
+@app.route('/api/users', methods=['GET'])
+@require_auth()
+@require_role('admin')
+def get_all_users():
+    """Get all users (Admin only)"""
+    try:
+        users = db.get_all_users()
+        user_list = []
+        for user in users:
+            user_list.append({
+                'id': user['id'],
+                'username': user['username'],
+                'email': user['email'],
+                'role': user['role'],
+                'province': user.get('province') or '(Không có)',
+                'lastLogin': user.get('last_login'),
+                'isActive': user.get('is_active', True),
+                'createdAt': user.get('created_at'),
+                'site_ids': user.get('site_ids', [])
+            })
+        return jsonify({
+            'users': user_list,
+            'total': len(user_list)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/users/me', methods=['GET'])
+@require_auth()
+def get_current_user():
+    """Get current user's information including province"""
+    try:
+        user = db.get_user_by_id(g.user_id)
+        if user:
+            return jsonify({
+                'user': {
+                    'id': user['id'],
+                    'username': user['username'],
+                    'email': user['email'],
+                    'role': user['role'],
+                    'province': user.get('province'),
+                    'site_ids': user.get('site_ids', [])
+                }
+            }), 200
+        else:
+            return jsonify({'error': 'User not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/users/me/province', methods=['PUT'])
+@require_auth()
+@require_role('admin', 'operator')
+def update_current_user_province():
+    """Update current user's province"""
+    try:
+        data = request.get_json()
+        province = data.get('province', '').strip()
+        
+        if not province:
+            return jsonify({'error': 'Province is required'}), 400
+        
+        success = db.update_user_province(g.user_id, province)
+        
+        if success:
+            # Log audit
+            db.add_audit_log(
+                user_id=g.user_id,
+                username=g.username,
+                action='update_province',
+                resource_type='user',
+                resource_id=str(g.user_id),
+                ip_address=request.remote_addr,
+                new_values={'province': province}
+            )
+            
+            return jsonify({
+                'message': 'Province updated successfully',
+                'province': province
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to update province'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/users/<int:user_id>/province', methods=['PUT'])
+@require_auth()
+@require_role('admin')
+def update_user_province(user_id):
+    """Update a user's province (Admin only)"""
+    try:
+        data = request.get_json()
+        province = data.get('province', '').strip()
+        
+        if not province:
+            return jsonify({'error': 'Province is required'}), 400
+        
+        user = db.get_user_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        success = db.update_user_province(user_id, province)
+        
+        if success:
+            # Log audit
+            db.add_audit_log(
+                user_id=g.user_id,
+                username=g.username,
+                action='update_user_province',
+                resource_type='user',
+                resource_id=str(user_id),
+                ip_address=request.remote_addr,
+                new_values={'province': province}
+            )
+            
+            return jsonify({
+                'message': f'Province for user {user["username"]} updated successfully',
+                'user_id': user_id,
+                'province': province
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to update province'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/users', methods=['POST'])
+@require_auth()
+@require_role('admin')
+def create_user():
+    """Create a new user (Admin only)"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+        role = data.get('role', 'user')
+        province = data.get('province', '').strip()
+        
+        # Validation
+        if not username or not email or not password:
+            return jsonify({'error': 'Username, email, and password are required'}), 400
+        
+        if role == 'operator' and not province:
+            return jsonify({'error': 'Province is required for operator role'}), 400
+        
+        # Check if username already exists
+        if db.get_user_by_username(username):
+            return jsonify({'error': 'Username already exists'}), 400
+        
+        # Hash password
+        password_hash = JWTAuthManager.hash_password(password)
+        
+        # Create user
+        success = db.create_user(
+            username=username,
+            email=email,
+            password_hash=password_hash,
+            role=role,
+            province=province if role == 'operator' else None
+        )
+        
+        if success:
+            user = db.get_user_by_username(username)
+            
+            # Log audit
+            db.add_audit_log(
+                user_id=g.user_id,
+                username=g.username,
+                action='create_user',
+                resource_type='user',
+                resource_id=str(user['id']),
+                ip_address=request.remote_addr,
+                new_values={
+                    'username': username,
+                    'email': email,
+                    'role': role,
+                    'province': province
+                }
+            )
+            
+            return jsonify({
+                'message': 'User created successfully',
+                'id': user['id'],
+                'username': username,
+                'email': email,
+                'role': role,
+                'province': province
+            }), 201
+        else:
+            return jsonify({'error': 'Failed to create user'}), 500
+    except Exception as e:
+        print(f"Error creating user: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/devices/by-province', methods=['GET'])
+@require_auth()
+def get_devices_by_province():
+    """Get devices for a specific province"""
+    try:
+        province = request.args.get('province', None, type=str)
+        user = db.get_user_by_id(g.user_id)
+        
+        # If operator, use their province
+        if user['role'] == 'operator':
+            if not user.get('province'):
+                return jsonify({'error': 'Operator province not set'}), 400
+            province = user['province']
+        
+        if not province:
+            return jsonify({'error': 'Province parameter required'}), 400
+        
+        devices = db.get_devices_by_province(province)
+        
+        return jsonify({
+            'status': 'ok',
+            'province': province,
+            'devices': devices,
+            'total': len(devices)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/by-province', methods=['GET'])
+@require_auth()
+def get_alerts_by_province():
+    """Get alerts for a specific province"""
+    try:
+        province = request.args.get('province', None, type=str)
+        danger_level = request.args.get('level', None, type=str)
+        limit = request.args.get('limit', -1, type=int)
+        user = db.get_user_by_id(g.user_id)
+        
+        # If operator, use their province
+        if user['role'] == 'operator':
+            if not user.get('province'):
+                return jsonify({'error': 'Operator province not set'}), 400
+            province = user['province']
+        
+        if not province:
+            return jsonify({'error': 'Province parameter required'}), 400
+        
+        # Get alerts
+        alerts = alert_manager.get_active_alerts(danger_level=danger_level, limit=limit)
+        
+        # Filter alerts by province
+        devices_in_province = db.get_devices_by_province(province)
+        device_ids_in_province = set(d['device_id'] for d in devices_in_province)
+        
+        filtered_alerts = [a for a in alerts if a.get('device_id') in device_ids_in_province]
+        
+        return jsonify({
+            'province': province,
+            'alerts': filtered_alerts,
+            'total': len(filtered_alerts),
+            'timestamp': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/thresholds/by-province', methods=['GET'])
+@require_auth()
+def get_thresholds_by_province():
+    """Get alert thresholds for a specific province"""
+    try:
+        province = request.args.get('province', None, type=str)
+        sensor_type = request.args.get('sensor_type', None, type=str)
+        user = db.get_user_by_id(g.user_id)
+        
+        # If operator, use their province
+        if user['role'] == 'operator':
+            if not user.get('province'):
+                return jsonify({'error': 'Operator province not set'}), 400
+            province = user['province']
+        
+        if not province:
+            return jsonify({'error': 'Province parameter required'}), 400
+        
+        # Get thresholds for province
+        thresholds = alert_manager.get_thresholds_for_province(province, sensor_type)
+        
+        return jsonify({
+            'province': province,
+            'thresholds': thresholds,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/thresholds/by-province', methods=['POST'])
+@require_auth()
+@require_role('admin', 'operator')
+def update_threshold_by_province():
+    """Update alert threshold for a specific province (Admin/Operator only)"""
+    try:
+        data = request.json
+        province = data.get('province')
+        sensor_type = data.get('sensor_type')
+        threshold_name = data.get('threshold_name')
+        value = data.get('value')
+        user = db.get_user_by_id(g.user_id)
+        
+        if not all([sensor_type, threshold_name, value]):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # If operator, can only update their own province
+        if user['role'] == 'operator':
+            if not user.get('province'):
+                return jsonify({'error': 'Operator province not set'}), 400
+            if not province:
+                province = user['province']
+            elif province != user['province']:
+                return jsonify({'error': 'Operator can only update thresholds for their own province'}), 403
+        
+        if not province:
+            return jsonify({'error': 'Province parameter required'}), 400
+        
+        success = alert_manager.update_threshold_by_province(
+            province, sensor_type, threshold_name, float(value)
+        )
+        
+        if success:
+            # Log audit
+            db.add_audit_log(
+                user_id=g.user_id,
+                username=g.username,
+                action='update_threshold_by_province',
+                resource_type='alert_thresholds',
+                resource_id=f'{province}:{sensor_type}:{threshold_name}',
+                ip_address=request.remote_addr,
+                new_values={
+                    'province': province,
+                    'sensor_type': sensor_type,
+                    'threshold_name': threshold_name,
+                    'value': value
+                }
+            )
+            
+            return jsonify({
+                'message': 'Threshold updated for province',
+                'province': province,
+                'sensor_type': sensor_type,
+                'threshold_name': threshold_name,
+                'value': value
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to update threshold'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("🚀 Starting Web Server on http://localhost:5000")

@@ -77,7 +77,7 @@ export default function DashboardPage() {
                 <Separator />
 
                 {/* Alert Section */}
-                <AlertPanel />
+                <AlertPanel showActions={false} />
 
                 <Separator />
 

@@ -59,6 +59,7 @@ class SensorDatabase:
                 device_id TEXT PRIMARY KEY,
                 project_id TEXT,
                 site_id TEXT,
+                province TEXT,
                 latitude REAL,
                 longitude REAL,
                 altitude REAL,
@@ -81,6 +82,7 @@ class SensorDatabase:
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 role TEXT DEFAULT 'user',
+                province TEXT,
                 site_ids TEXT,
                 is_active INTEGER DEFAULT 1,
                 last_login TIMESTAMP,
@@ -106,6 +108,20 @@ class SensorDatabase:
             )
         ''')
         
+        # Alert thresholds by province table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS thresholds_by_province (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                province TEXT NOT NULL,
+                sensor_type TEXT NOT NULL,
+                threshold_name TEXT NOT NULL,
+                threshold_value REAL NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(province, sensor_type, threshold_name)
+            )
+        ''')
+        
         # Create indexes for better queries
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_device_id ON sensor_readings(device_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_sensor_type ON sensor_readings(sensor_type)')
@@ -113,6 +129,9 @@ class SensorDatabase:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_username ON users(username)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_province_device ON devices(province)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_province_user ON users(province)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_province_threshold ON thresholds_by_province(province)')
         
         conn.commit()
         conn.close()
@@ -149,26 +168,6 @@ class SensorDatabase:
             return True
         except Exception as e:
             print(f"Error inserting reading: {e}")
-            return False
-    
-    def register_device(self, device_id: str, project_id: str, site_id: str,
-                       latitude: float = 0, longitude: float = 0, name: str = ""):
-        """Register a device"""
-        try:
-            conn = self.get_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                INSERT OR REPLACE INTO devices 
-                (device_id, project_id, site_id, latitude, longitude, name)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (device_id, project_id, site_id, latitude, longitude, name))
-            
-            conn.commit()
-            conn.close()
-            return True
-        except Exception as e:
-            print(f"Error registering device: {e}")
             return False
     
     def update_alert_status(self, device_id: str, alert_status: str = "normal", 
@@ -423,7 +422,7 @@ class SensorDatabase:
     # ============ USER MANAGEMENT ============
     
     def create_user(self, username: str, email: str, password_hash: str, 
-                   role: str = 'user', site_ids: Optional[list] = None) -> bool:
+                   role: str = 'user', province: Optional[str] = None, site_ids: Optional[list] = None) -> bool:
         """Create a new user"""
         try:
             conn = self.get_connection()
@@ -432,9 +431,9 @@ class SensorDatabase:
             site_ids_json = json.dumps(site_ids) if site_ids else json.dumps([])
             
             cursor.execute('''
-                INSERT INTO users (username, email, password_hash, role, site_ids)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (username, email, password_hash, role, site_ids_json))
+                INSERT INTO users (username, email, password_hash, role, province, site_ids)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (username, email, password_hash, role, province, site_ids_json))
             
             conn.commit()
             conn.close()
@@ -450,7 +449,7 @@ class SensorDatabase:
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT id, username, email, password_hash, role, site_ids, is_active, last_login, created_at
+                SELECT id, username, email, password_hash, role, province, site_ids, is_active, last_login, created_at
                 FROM users
                 WHERE username = ?
             ''', (username,))
@@ -476,7 +475,7 @@ class SensorDatabase:
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT id, username, email, role, site_ids, is_active, last_login, created_at
+                SELECT id, username, email, role, province, site_ids, is_active, last_login, created_at
                 FROM users
                 WHERE id = ?
             ''', (user_id,))
@@ -494,6 +493,33 @@ class SensorDatabase:
         except Exception as e:
             print(f"Error getting user: {e}")
             return None
+    
+    def get_all_users(self) -> List[Dict]:
+        """Get all users"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, username, email, role, province, site_ids, is_active, last_login, created_at
+                FROM users
+                ORDER BY created_at DESC
+            ''')
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            users = []
+            for row in rows:
+                user = dict(row)
+                if user.get('site_ids'):
+                    user['site_ids'] = json.loads(user['site_ids'])
+                users.append(user)
+            
+            return users
+        except Exception as e:
+            print(f"Error getting all users: {e}")
+            return []
     
     def update_user_last_login(self, user_id: int) -> bool:
         """Update user's last login timestamp"""
@@ -590,3 +616,170 @@ class SensorDatabase:
         except Exception as e:
             print(f"Error getting audit logs: {e}")
             return {'data': [], 'pagination': {'total': 0}}
+    
+    # ============ PROVINCE MANAGEMENT ============
+    
+    def update_user_province(self, user_id: int, province: str) -> bool:
+        """Update user's province"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE users
+                SET province = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ''', (province, user_id))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error updating user province: {e}")
+            return False
+    
+    def get_devices_by_province(self, province: str) -> List[Dict[str, Any]]:
+        """Get all devices in a province"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT device_id, project_id, site_id, province, latitude, longitude, altitude, name, status, alert_status, last_update
+                FROM devices
+                WHERE province = ?
+                ORDER BY device_id
+            ''', (province,))
+            
+            results = [dict(row) for row in cursor.fetchall()]
+            conn.close()
+            return results
+        except Exception as e:
+            print(f"Error getting devices by province: {e}")
+            return []
+    
+    def get_device_province(self, device_id: str) -> Optional[str]:
+        """Get province of a device"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT province FROM devices WHERE device_id = ?', (device_id,))
+            row = cursor.fetchone()
+            conn.close()
+            
+            return row['province'] if row else None
+        except Exception as e:
+            print(f"Error getting device province: {e}")
+            return None
+    
+    def update_device_province(self, device_id: str, province: str) -> bool:
+        """Update device's province"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE devices
+                SET province = ?, last_update = CURRENT_TIMESTAMP
+                WHERE device_id = ?
+            ''', (province, device_id))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error updating device province: {e}")
+            return False
+    
+    def register_device(self, device_id: str, project_id: str, site_id: str,
+                       province: Optional[str] = None,
+                       latitude: float = 0, longitude: float = 0, name: str = ""):
+        """Register a device with province information"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO devices 
+                (device_id, project_id, site_id, province, latitude, longitude, name)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (device_id, project_id, site_id, province, latitude, longitude, name))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error registering device: {e}")
+            return False
+    
+    # ============ PROVINCE THRESHOLDS MANAGEMENT ============
+    
+    def save_threshold_by_province(self, province: str, sensor_type: str, 
+                                   threshold_name: str, value: float) -> bool:
+        """Save a threshold for a specific province"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO thresholds_by_province 
+                (province, sensor_type, threshold_name, threshold_value, updated_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (province, sensor_type, threshold_name, value))
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error saving threshold by province: {e}")
+            return False
+    
+    def get_thresholds_by_province(self, province: str, sensor_type: Optional[str] = None) -> Dict[str, Any]:
+        """Get thresholds for a province (optionally filtered by sensor type)"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            if sensor_type:
+                cursor.execute('''
+                    SELECT sensor_type, threshold_name, threshold_value
+                    FROM thresholds_by_province
+                    WHERE province = ? AND sensor_type = ?
+                    ORDER BY sensor_type, threshold_name
+                ''', (province, sensor_type))
+            else:
+                cursor.execute('''
+                    SELECT sensor_type, threshold_name, threshold_value
+                    FROM thresholds_by_province
+                    WHERE province = ?
+                    ORDER BY sensor_type, threshold_name
+                ''', (province,))
+            
+            results = {}
+            for row in cursor.fetchall():
+                sensor = row['sensor_type']
+                if sensor not in results:
+                    results[sensor] = {}
+                results[sensor][row['threshold_name']] = row['threshold_value']
+            
+            conn.close()
+            return results
+        except Exception as e:
+            print(f"Error getting thresholds by province: {e}")
+            return {}
+    
+    def province_has_custom_thresholds(self, province: str) -> bool:
+        """Check if province has custom thresholds defined"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT COUNT(*) as cnt FROM thresholds_by_province WHERE province = ?', (province,))
+            row = cursor.fetchone()
+            conn.close()
+            
+            return row['cnt'] > 0 if row else False
+        except Exception as e:
+            print(f"Error checking province thresholds: {e}")
+            return False

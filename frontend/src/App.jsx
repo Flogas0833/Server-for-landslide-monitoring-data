@@ -7,6 +7,7 @@ import StatisticsPage from './pages/StatisticsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminAuditLogsPage from './pages/AdminAuditLogsPage';
 import AlertsPage from './pages/AlertsPage';
+import ThresholdsPage from './pages/ThresholdsPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
@@ -92,6 +93,15 @@ function AppRoutes() {
             <Layout>
               <AlertsPage />
             </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/thresholds"
+        element={
+          <ProtectedRoute requiredRoles={['admin', 'operator']}>
+            <ThresholdsPage />
           </ProtectedRoute>
         }
       />

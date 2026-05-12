@@ -3,8 +3,8 @@ import { formatTime } from '../utils/helpers';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Alert, AlertTitle, AlertDescription } from './ui';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
-export default function AlertPanel() {
-    const { data: alertData = {} } = useActiveAlerts();
+export default function AlertPanel({ showActions = true }) {
+    const { data: alertData = {} } = useActiveAlerts({ limit: 9999999 });
     const { mutate: acknowledgeAlert } = useAcknowledgeAlert();
 
     const alerts = alertData.alerts || [];
@@ -65,15 +65,15 @@ export default function AlertPanel() {
                             <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
                                 <div className="space-y-0.5">
                                     <p>Thiết Bị: <span className="font-mono">{alert.device_id}</span></p>
-                                    <p>Lúc: {formatTime(alert.triggered_at)}</p>
+                                    <p>Lúc: {formatTime(alert.timestamp)}</p>
                                 </div>
-                                {!alert.acknowledged_at && (
+                                {showActions && !alert.acknowledged_at && (
                                     <Button
                                         size="sm"
                                         variant="outline"
                                         onClick={() => acknowledgeAlert({ alertId: alert.id })}
                                     >
-                                        Xác nhận
+                                        Xử lý
                                     </Button>
                                 )}
                             </div>

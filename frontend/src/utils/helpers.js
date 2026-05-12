@@ -1,9 +1,11 @@
 /**
- * Format timestamp to readable format
+ * Format timestamp to readable format (GMT+7)
  */
 export const formatTime = (timestamp) => {
     if (!timestamp) return '-';
     const date = new Date(timestamp);
+    // Add 7 hours for GMT+7 timezone
+    date.setHours(date.getHours() + 7);
     return date.toLocaleString('vi-VN', {
         year: 'numeric',
         month: '2-digit',

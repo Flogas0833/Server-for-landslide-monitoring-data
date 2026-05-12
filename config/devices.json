@@ -4,6 +4,7 @@
             "device_id": "SENSOR_POINT001",
             "site_id": "SITE01",
             "project_id": "PRJ001",
+            "province": "Hà Nội",
             "name": "Sensor 1",
             "description": "Landslide monitoring sensor at Site 1",
             "sensor_types": [
@@ -22,6 +23,7 @@
             "device_id": "SENSOR_POINT002",
             "site_id": "SITE02",
             "project_id": "PRJ001",
+            "province": "Hải Phòng",
             "name": "Sensor 2",
             "description": "Landslide monitoring sensor at Site 2",
             "sensor_types": [

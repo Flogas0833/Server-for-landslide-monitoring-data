@@ -85,12 +85,36 @@ class AlertManager:
         self.db_path = db_path
         self.thresholds = self.DEFAULT_THRESHOLDS.copy()
         self.init_alert_tables()
+        self.load_thresholds_from_db()
     
     def get_connection(self):
         """Get database connection"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         return conn
+    
+    def load_thresholds_from_db(self):
+        """Load thresholds from database"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT sensor_type, threshold_name, threshold_value FROM alert_thresholds')
+            rows = cursor.fetchall()
+            
+            for row in rows:
+                sensor_type = row['sensor_type']
+                threshold_name = row['threshold_name']
+                threshold_value = row['threshold_value']
+                
+                if sensor_type not in self.thresholds:
+                    self.thresholds[sensor_type] = {}
+                
+                self.thresholds[sensor_type][threshold_name] = threshold_value
+            
+            conn.close()
+        except Exception as e:
+            print(f"Error loading thresholds from database: {str(e)}")
     
     def init_alert_tables(self):
         """Initialize alert tables in database"""
@@ -313,25 +337,27 @@ class AlertManager:
             print(f"Error creating alert: {str(e)}")
             return False
     
-    def get_active_alerts(self, danger_level: Optional[str] = None) -> List[Dict]:
+    def get_active_alerts(self, danger_level: Optional[str] = None, limit: int = -1) -> List[Dict]:
         """Get all active (unacknowledged) alerts"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
+            limit_clause = "" if limit == -1 else f"LIMIT {limit}"
+            
             if danger_level:
-                cursor.execute('''
+                cursor.execute(f'''
                     SELECT * FROM alerts 
                     WHERE acknowledged = 0 AND danger_level = ?
                     ORDER BY timestamp DESC
-                    LIMIT 100
+                    {limit_clause}
                 ''', (danger_level,))
             else:
-                cursor.execute('''
+                cursor.execute(f'''
                     SELECT * FROM alerts 
                     WHERE acknowledged = 0
                     ORDER BY timestamp DESC
-                    LIMIT 100
+                    {limit_clause}
                 ''')
             
             results = [dict(row) for row in cursor.fetchall()]
@@ -412,10 +438,82 @@ class AlertManager:
             return False
     
     def get_thresholds(self, sensor_type: Optional[str] = None) -> Dict:
-        """Get all thresholds or for a specific sensor type"""
+        """Get all thresholds or for a specific sensor type
+        Returns format: {sensor_type: {threshold_name: {value: X, updated_at: Y}}}
+        """
+        from datetime import datetime
+        result = {}
+        for sensor, thresholds in self.thresholds.items():
+            result[sensor] = {}
+            for threshold_name, value in thresholds.items():
+                result[sensor][threshold_name] = {
+                    'value': value,
+                    'updated_at': datetime.now().isoformat()
+                }
+        
         if sensor_type:
-            return self.thresholds.get(sensor_type, {})
-        return self.thresholds
+            return result.get(sensor_type, {})
+        return result
+    
+    def get_all_thresholds_from_db(self) -> Dict:
+        """Get all thresholds directly from database (with metadata)"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT sensor_type, threshold_name, threshold_value, updated_at 
+                FROM alert_thresholds 
+                ORDER BY sensor_type, threshold_name
+            ''')
+            rows = cursor.fetchall()
+            
+            result = {}
+            for row in rows:
+                sensor_type = row['sensor_type']
+                threshold_name = row['threshold_name']
+                
+                if sensor_type not in result:
+                    result[sensor_type] = {}
+                
+                result[sensor_type][threshold_name] = {
+                    'value': row['threshold_value'],
+                    'updated_at': row['updated_at']
+                }
+            
+            conn.close()
+            return result
+        except Exception as e:
+            print(f"Error getting thresholds from database: {str(e)}")
+            return {}
+    
+    def reset_thresholds(self) -> bool:
+        """Reset all thresholds to default values"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Delete all thresholds
+            cursor.execute('DELETE FROM alert_thresholds')
+            
+            # Re-insert defaults
+            for sensor_type, thresholds in self.DEFAULT_THRESHOLDS.items():
+                for threshold_name, threshold_value in thresholds.items():
+                    cursor.execute('''
+                        INSERT INTO alert_thresholds 
+                        (sensor_type, threshold_name, threshold_value)
+                        VALUES (?, ?, ?)
+                    ''', (sensor_type, threshold_name, threshold_value))
+            
+            # Reset local thresholds
+            self.thresholds = self.DEFAULT_THRESHOLDS.copy()
+            
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error resetting thresholds: {str(e)}")
+            return False
     
     def get_alert_stats(self) -> Dict:
         """Get alert statistics"""
@@ -458,3 +556,133 @@ class AlertManager:
         except Exception as e:
             print(f"Error getting alert stats: {str(e)}")
             return {}
+    
+    # ============ PROVINCE-SPECIFIC THRESHOLDS ============
+    
+    def update_threshold_by_province(self, province: str, sensor_type: str, 
+                                    threshold_name: str, value: float) -> bool:
+        """Update a threshold for a specific province"""
+        try:
+            # Import here to avoid circular import
+            import sys
+            import os
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from database import SensorDatabase
+            
+            db = SensorDatabase()
+            return db.save_threshold_by_province(province, sensor_type, threshold_name, value)
+        except Exception as e:
+            print(f"Error updating threshold by province: {str(e)}")
+            return False
+    
+    def get_thresholds_for_province(self, province: str, sensor_type: Optional[str] = None) -> Dict:
+        """
+        Get thresholds for a specific province.
+        If province has custom thresholds, return those with metadata. Otherwise return defaults.
+        Returns format: {sensor_type: {threshold_name: {value: X, updated_at: Y}}}
+        """
+        try:
+            import sys
+            import os
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from database import SensorDatabase
+            from datetime import datetime
+            
+            db = SensorDatabase()
+            province_thresholds = db.get_thresholds_by_province(province, sensor_type)
+            
+            # If province has custom thresholds, format them with metadata
+            if province_thresholds:
+                result = {}
+                for sensor, thresholds in province_thresholds.items():
+                    result[sensor] = {}
+                    for threshold_name, value in thresholds.items():
+                        result[sensor][threshold_name] = {
+                            'value': value,
+                            'updated_at': datetime.now().isoformat()
+                        }
+                
+                if sensor_type:
+                    return result.get(sensor_type, {})
+                return result
+            
+            # Otherwise return default thresholds with metadata
+            result = {}
+            thresholds_to_use = self.thresholds
+            for sensor, thresholds in thresholds_to_use.items():
+                result[sensor] = {}
+                for threshold_name, value in thresholds.items():
+                    result[sensor][threshold_name] = {
+                        'value': value,
+                        'updated_at': datetime.now().isoformat()
+                    }
+            
+            if sensor_type:
+                return result.get(sensor_type, {})
+            return result
+        except Exception as e:
+            print(f"Error getting thresholds for province: {str(e)}")
+            # Return defaults on error with metadata
+            result = {}
+            thresholds_to_use = self.thresholds
+            for sensor, thresholds in thresholds_to_use.items():
+                result[sensor] = {}
+                for threshold_name, value in thresholds.items():
+                    result[sensor][threshold_name] = {
+                        'value': value,
+                        'updated_at': datetime.now().isoformat()
+                    }
+            
+            if sensor_type:
+                return result.get(sensor_type, {})
+            return result
+    
+    def get_device_alert_thresholds(self, device_id: str, sensor_type: Optional[str] = None) -> Dict:
+        """
+        Get thresholds for a device based on its province.
+        Returns format: {sensor_type: {threshold_name: {value: X, updated_at: Y}}}
+        """
+        try:
+            import sys
+            import os
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from database import SensorDatabase
+            
+            db = SensorDatabase()
+            province = db.get_device_province(device_id)
+            
+            if province:
+                return self.get_thresholds_for_province(province, sensor_type)
+            
+            # Return defaults if no province found (with metadata)
+            from datetime import datetime
+            result = {}
+            thresholds_to_use = self.thresholds
+            for sensor, thresholds in thresholds_to_use.items():
+                result[sensor] = {}
+                for threshold_name, value in thresholds.items():
+                    result[sensor][threshold_name] = {
+                        'value': value,
+                        'updated_at': datetime.now().isoformat()
+                    }
+            
+            if sensor_type:
+                return result.get(sensor_type, {})
+            return result
+        except Exception as e:
+            print(f"Error getting device alert thresholds: {str(e)}")
+            # Return defaults on error (with metadata)
+            from datetime import datetime
+            result = {}
+            thresholds_to_use = self.thresholds
+            for sensor, thresholds in thresholds_to_use.items():
+                result[sensor] = {}
+                for threshold_name, value in thresholds.items():
+                    result[sensor][threshold_name] = {
+                        'value': value,
+                        'updated_at': datetime.now().isoformat()
+                    }
+            
+            if sensor_type:
+                return result.get(sensor_type, {})
+            return result
