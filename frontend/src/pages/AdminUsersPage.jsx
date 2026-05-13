@@ -99,167 +99,180 @@ export const AdminUsersPage = () => {
     }
 
     return (
-        <div className="admin-page">
-            <div className="admin-header">
-                <h1>
-                    <Users size={28} />
-                    Quản Lý Người Dùng
-                </h1>
-                <Button onClick={() => setShowForm(!showForm)}>
-                    <Plus size={18} />
-                    Tạo Người Dùng Mới
-                </Button>
-            </div>
+        <div className="min-h-screen bg-background">
+            {/* Header */}
+            <header className="border-b bg-card py-4 mb-4">
+                <div className="px-4 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <h1 className="text-3xl font-bold flex items-center gap-2">
+                                <Users className="w-8 h-8 text-primary" />
+                                Quản Lý Người Dùng
+                            </h1>
+                            <p className="text-sm text-muted-foreground">
+                                Quản lý người dùng và phân quyền truy cập hệ thống
+                            </p>
+                        </div>
+                        <Button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2">
+                            <Plus size={18} />
+                            Tạo Người Dùng Mới
+                        </Button>
+                    </div>
+                </div>
+            </header>
 
-            {/* Create User Form */}
-            {showForm && (
-                <Card className="form-card">
-                    <h3>Tạo Người Dùng Mới</h3>
-                    <div className="form-group">
-                        <label>Username</label>
-                        <Input
-                            value={formData.username}
-                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                            placeholder="Nhập username"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Email</label>
-                        <Input
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            placeholder="Nhập email"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Password</label>
-                        <Input
-                            type="password"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            placeholder="Nhập password"
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Vai Trò</label>
-                        <select
-                            value={formData.role}
-                            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                            className="form-select"
-                        >
-                            <option value="user">Người Dùng</option>
-                            <option value="operator">Nhân Viên Vận Hành</option>
-                            <option value="admin">Quản Trị Viên</option>
-                        </select>
-                    </div>
-                    {formData.role === 'operator' && (
+            <div className="px-4">
+
+                {/* Create User Form */}
+                {showForm && (
+                    <Card className="form-card">
+                        <h3>Tạo Người Dùng Mới</h3>
                         <div className="form-group">
-                            <label>Tỉnh Thành (Bắt buộc cho Nhân Viên Vận Hành)</label>
+                            <label>Username</label>
+                            <Input
+                                value={formData.username}
+                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                placeholder="Nhập username"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Email</label>
+                            <Input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                placeholder="Nhập email"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Password</label>
+                            <Input
+                                type="password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                placeholder="Nhập password"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Vai Trò</label>
                             <select
-                                value={formData.province}
-                                onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                                value={formData.role}
+                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                 className="form-select"
                             >
-                                <option value="">-- Chọn Tỉnh Thành --</option>
-                                {AVAILABLE_PROVINCES.map(province => (
-                                    <option key={province} value={province}>{province}</option>
-                                ))}
+                                <option value="user">Người Dùng</option>
+                                <option value="operator">Nhân Viên Vận Hành</option>
+                                <option value="admin">Quản Trị Viên</option>
                             </select>
                         </div>
-                    )}
-                    <div className="form-actions">
-                        <Button onClick={handleCreateUser}>Tạo</Button>
-                        <Button onClick={() => setShowForm(false)} variant="outline">Hủy</Button>
-                    </div>
-                </Card>
-            )}
-
-            {/* Users Table */}
-            <Card className="users-table-card">
-                {loading ? (
-                    <p>Đang tải...</p>
-                ) : (
-                    <table className="users-table">
-                        <thead>
-                            <tr>
-                                <th>Tên Đăng Nhập</th>
-                                <th>Email</th>
-                                <th>Vai Trò</th>
-                                <th>Tỉnh Thành</th>
-                                <th>Lần Đăng Nhập Cuối</th>
-                                <th>Hành Động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {users.map((user) => (
-                                <tr key={user.id}>
-                                    <td>{user.username}</td>
-                                    <td>{user.email}</td>
-                                    <td>
-                                        <span className={`role-badge role-${user.role}`}>
-                                            {translateRole(user.role)}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {editingProvinceId === user.id ? (
-                                            <div className="province-edit">
-                                                <select
-                                                    value={editingProvinceValue}
-                                                    onChange={(e) => setEditingProvinceValue(e.target.value)}
-                                                    className="form-select-inline"
-                                                >
-                                                    <option value="">-- Không có --</option>
-                                                    {AVAILABLE_PROVINCES.map(province => (
-                                                        <option key={province} value={province}>{province}</option>
-                                                    ))}
-                                                </select>
-                                                <button
-                                                    className="save-btn"
-                                                    onClick={() => handleSaveProvince(user.id)}
-                                                    title="Lưu"
-                                                >
-                                                    <Save size={14} />
-                                                </button>
-                                                <button
-                                                    className="cancel-btn"
-                                                    onClick={() => setEditingProvinceId(null)}
-                                                    title="Hủy"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="province-view">
-                                                <span>{user.province}</span>
-                                                {user.role === 'operator' && (
-                                                    <button
-                                                        className="edit-btn"
-                                                        onClick={() => {
-                                                            setEditingProvinceId(user.id);
-                                                            // Convert '(Không có)' back to empty string for editing
-                                                            setEditingProvinceValue(user.province === '(Không có)' ? '' : user.province || '');
-                                                        }}
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        <Edit2 size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td>{user.lastLogin}</td>
-                                    <td>
-                                        <button className="delete-btn" title="Xóa">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                        {formData.role === 'operator' && (
+                            <div className="form-group">
+                                <label>Tỉnh Thành (Bắt buộc cho Nhân Viên Vận Hành)</label>
+                                <select
+                                    value={formData.province}
+                                    onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                                    className="form-select"
+                                >
+                                    <option value="">-- Chọn Tỉnh Thành --</option>
+                                    {AVAILABLE_PROVINCES.map(province => (
+                                        <option key={province} value={province}>{province}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                        <div className="form-actions">
+                            <Button onClick={handleCreateUser}>Tạo</Button>
+                            <Button onClick={() => setShowForm(false)} variant="outline">Hủy</Button>
+                        </div>
+                    </Card>
                 )}
-            </Card>
+
+                {/* Users Table */}
+                <Card className="users-table-card">
+                    {loading ? (
+                        <p>Đang tải...</p>
+                    ) : (
+                        <table className="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Tên Đăng Nhập</th>
+                                    <th>Email</th>
+                                    <th>Vai Trò</th>
+                                    <th>Tỉnh Thành</th>
+                                    <th>Lần Đăng Nhập Cuối</th>
+                                    <th>Hành Động</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.map((user) => (
+                                    <tr key={user.id}>
+                                        <td>{user.username}</td>
+                                        <td>{user.email}</td>
+                                        <td>
+                                            <span className={`role-badge role-${user.role}`}>
+                                                {translateRole(user.role)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {editingProvinceId === user.id ? (
+                                                <div className="province-edit">
+                                                    <select
+                                                        value={editingProvinceValue}
+                                                        onChange={(e) => setEditingProvinceValue(e.target.value)}
+                                                        className="form-select-inline"
+                                                    >
+                                                        <option value="">-- Không có --</option>
+                                                        {AVAILABLE_PROVINCES.map(province => (
+                                                            <option key={province} value={province}>{province}</option>
+                                                        ))}
+                                                    </select>
+                                                    <button
+                                                        className="save-btn"
+                                                        onClick={() => handleSaveProvince(user.id)}
+                                                        title="Lưu"
+                                                    >
+                                                        <Save size={14} />
+                                                    </button>
+                                                    <button
+                                                        className="cancel-btn"
+                                                        onClick={() => setEditingProvinceId(null)}
+                                                        title="Hủy"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="province-view">
+                                                    <span>{user.province}</span>
+                                                    {user.role === 'operator' && (
+                                                        <button
+                                                            className="edit-btn"
+                                                            onClick={() => {
+                                                                setEditingProvinceId(user.id);
+                                                                // Convert '(Không có)' back to empty string for editing
+                                                                setEditingProvinceValue(user.province === '(Không có)' ? '' : user.province || '');
+                                                            }}
+                                                            title="Chỉnh sửa"
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td>{user.lastLogin}</td>
+                                        <td>
+                                            <button className="delete-btn" title="Xóa">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </Card>
+            </div>
         </div>
     );
 };

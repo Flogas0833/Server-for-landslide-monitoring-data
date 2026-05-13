@@ -111,13 +111,18 @@ export const translateAction = (action) => {
         'export_data': 'Xuất dữ liệu',
         'import_data': 'Nhập dữ liệu',
         'user_created': 'Tạo người dùng',
+        'create_user': 'Tạo người dùng',
         'user_updated': 'Cập nhật người dùng',
         'user_deleted': 'Xóa người dùng',
         'device_created': 'Tạo thiết bị',
         'device_updated': 'Cập nhật thiết bị',
         'device_deleted': 'Xóa thiết bị',
         'alert_acknowledged': 'Xác nhận cảnh báo',
+        'acknowledge_alert': 'Xác nhận cảnh báo',
         'settings_changed': 'Thay đổi cài đặt',
+        'update_threshold': 'Cập nhật ngưỡng cảnh báo',
+        'update_threshold_by_province': 'Cập nhật ngưỡng theo tỉnh',
+        'reset_threshold': 'Đặt lại ngưỡng cảnh báo',
     };
     return actionMap[action] || action.replace(/_/g, ' ');
 };
@@ -132,6 +137,7 @@ export const translateResourceType = (type) => {
         'device': 'Thiết bị',
         'alert': 'Cảnh báo',
         'system': 'Hệ thống',
+        'alert_thresholds': 'Ngưỡng cảnh báo',
     };
     return typeMap[type] || type;
 };

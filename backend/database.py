@@ -564,8 +564,14 @@ class SensorDatabase:
             return False
     
     def get_audit_logs(self, limit: int = 100, offset: int = 0, 
-                      user_id: Optional[int] = None) -> Dict[str, Any]:
-        """Get audit logs with pagination"""
+                      user_id: Optional[int] = None,
+                      username: Optional[str] = None,
+                      action: Optional[str] = None,
+                      resource_type: Optional[str] = None,
+                      ip_address: Optional[str] = None,
+                      start_date: Optional[str] = None,
+                      end_date: Optional[str] = None) -> Dict[str, Any]:
+        """Get audit logs with pagination and filtering"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
@@ -576,6 +582,30 @@ class SensorDatabase:
             if user_id:
                 conditions.append("user_id = ?")
                 params.append(user_id)
+            
+            if username:
+                conditions.append("username LIKE ?")
+                params.append(f"%{username}%")
+            
+            if action:
+                conditions.append("action = ?")
+                params.append(action)
+            
+            if resource_type:
+                conditions.append("resource_type = ?")
+                params.append(resource_type)
+            
+            if ip_address:
+                conditions.append("ip_address = ?")
+                params.append(ip_address)
+            
+            if start_date:
+                conditions.append("timestamp >= ?")
+                params.append(start_date)
+            
+            if end_date:
+                conditions.append("timestamp <= ?")
+                params.append(end_date)
             
             where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
             

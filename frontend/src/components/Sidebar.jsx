@@ -38,6 +38,18 @@ export const Sidebar = () => {
 
         const adminMenu = [
             {
+                label: 'Cảnh Báo',
+                path: '/admin/alerts',
+                icon: <AlertCircle size={20} />,
+                show: isAdmin || isOperator,
+            },
+            {
+                label: 'Ngưỡng Cảnh Báo',
+                path: '/admin/thresholds',
+                icon: <Settings size={20} />,
+                show: isAdmin || isOperator,
+            },
+            {
                 label: 'Thống Kê',
                 path: '/statistics',
                 icon: <BarChart3 size={20} />,
@@ -54,18 +66,6 @@ export const Sidebar = () => {
                 path: '/admin/audit-logs',
                 icon: <FileText size={20} />,
                 show: isAdmin,
-            },
-            {
-                label: 'Cảnh Báo',
-                path: '/admin/alerts',
-                icon: <AlertCircle size={20} />,
-                show: isAdmin || isOperator,
-            },
-            {
-                label: 'Ngưỡng Cảnh Báo',
-                path: '/admin/thresholds',
-                icon: <Settings size={20} />,
-                show: isAdmin || isOperator,
             },
         ];
 

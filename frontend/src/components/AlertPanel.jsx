@@ -42,7 +42,7 @@ export default function AlertPanel({ showActions = true }) {
                 <CardTitle className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
                         <AlertCircle className="w-5 h-5 text-destructive" />
-                        Cảnh Báo Hoạt Động
+                        Danh sách cảnh báo đang hoạt động
                     </span>
                     <Badge variant="destructive">{alerts.length}</Badge>
                 </CardTitle>

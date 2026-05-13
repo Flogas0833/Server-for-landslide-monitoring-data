@@ -44,7 +44,7 @@ export default function Statistics() {
 
                 <StatCard
                     icon={AlertTriangle}
-                    label="Cảnh Báo Hoạt Động"
+                    label="Cảnh Báo Nguy Hiểm"
                     value={alertStats.stats?.active_alerts || 0}
                     isLoading={alertsLoading}
                 />

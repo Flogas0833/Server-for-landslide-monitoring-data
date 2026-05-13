@@ -28,7 +28,7 @@ def confirm_deletion():
 
 
 def reset_database():
-    """Reset database - delete old data and reinitialize"""
+    """Reset database - delete only sensor_readings data, keep other tables intact"""
     db_path = os.path.join(os.path.dirname(__file__), "database", "sensors.db")
     
     try:
@@ -42,32 +42,44 @@ def reset_database():
                 print("\n❌ Hủy thao tác xóa database")
                 return False
             
-            # Delete old database file
-            print("\n🗑️  Đang xóa file database cũ...")
-            os.remove(db_path)
-            print("✅ Xóa thành công")
+            # Connect to database and clear only sensor_readings
+            print("\n🗑️  Đang xóa dữ liệu sensor_readings...")
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Delete only sensor_readings data
+            cursor.execute("DELETE FROM sensor_readings")
+            cursor.execute("DELETE FROM sqlite_sequence WHERE name='sensor_readings'")
+            
+            conn.commit()
+            conn.close()
+            print("✅ Xóa dữ liệu thành công - Các bảng khác vẫn nguyên vẹn")
         else:
             print(f"ℹ️  Database không tồn tại: {db_path}")
-        
-        # Reinitialize database
-        print("\n🔄 Đang tái khởi tạo database...")
-        db = SensorDatabase(db_path)
-        print("✅ Tái khởi tạo thành công")
+            # Initialize database if it doesn't exist
+            print("\n🔄 Đang khởi tạo database mới...")
+            db = SensorDatabase(db_path)
+            print("✅ Khởi tạo thành công")
         
         # Verify
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
         tables = cursor.fetchall()
-        conn.close()
         
+        # Get row counts for each table
         print("\n" + "=" * 60)
         print("✨ HOÀN TẤT RESET DATABASE")
         print("=" * 60)
         print(f"📁 Database: {db_path}")
-        print(f"📊 Tables tạo mới: {len(tables)}")
+        print(f"📊 Bảng hiện có:")
         for table in tables:
-            print(f"   - {table[0]}")
+            table_name = table[0]
+            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            count = cursor.fetchone()[0]
+            print(f"   - {table_name}: {count} bản ghi")
+        
+        conn.close()
         print("\n✅ Database sẵn sàng sử dụng\n")
         return True
         

@@ -1,7 +1,7 @@
 import { useRoleCheck } from '../hooks/useRoleCheck';
 import ThresholdsManager from '../components/ThresholdsManager';
 import Layout from '../components/Layout';
-import { AlertCircle } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '../components/ui';
 
 export default function ThresholdsPage() {
@@ -25,14 +25,22 @@ export default function ThresholdsPage() {
 
     return (
         <Layout>
-            <div className="p-6 space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold">Quản Lý Ngưỡng Cảnh Báo</h1>
-                    <p className="text-gray-600 mt-2">
-                        Cấu hình các ngưỡng cảnh báo cho các cảm biến theo tình hình thực tế
-                    </p>
+            {/* Header */}
+            <header className="border-b bg-card py-4 mb-4 mx-0">
+                <div className="px-4 py-4">
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <Settings className="w-8 h-8 text-primary" />
+                            Quản Lý Ngưỡng Cảnh Báo
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Cấu hình các ngưỡng cảnh báo cho các cảm biến theo tình hình thực tế
+                        </p>
+                    </div>
                 </div>
+            </header>
 
+            <div className="p-6 space-y-6">
                 <ThresholdsManager />
             </div>
         </Layout>

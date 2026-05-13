@@ -328,6 +328,14 @@ class SensorDataSubscriber:
             if alert_result:
                 danger_level, message, value = alert_result
                 if danger_level.value != 'normal':
+                    # Get the threshold that was exceeded
+                    threshold = self.alert_manager.get_threshold_for_alert(
+                        reading.sensor_type,
+                        danger_level,
+                        value,
+                        reading.data
+                    )
+                    
                     # Create alert in database
                     self.alert_manager.create_alert(
                         device_id=reading.device_id,
@@ -335,7 +343,7 @@ class SensorDataSubscriber:
                         danger_level=danger_level,
                         message=message,
                         value=value,
-                        threshold=0
+                        threshold=threshold
                     )
                     print(f"🚨 ALERT [{danger_level.value.upper()}] {reading.device_id}: {message}")
                     self.stats["alerts_triggered"] += 1

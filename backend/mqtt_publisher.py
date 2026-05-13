@@ -7,6 +7,7 @@ import json
 import time
 import random
 import hashlib
+import types
 from datetime import datetime
 from typing import Dict, Any
 import paho.mqtt.client as mqtt
@@ -460,20 +461,25 @@ if __name__ == "__main__":
             original_publish_gnss(**kwargs)
         publisher.publish_gnss = publish_gnss_with_offset
         
-        # For DEVICE002: Override vibration to send abnormal data (critical alert)
+        # For SENSOR_POINT002: Override vibration to send abnormal data (critical alert)
         # This allows testing alert functionality
-        if device_config.device_id == "DEVICE002":
-            original_publish_vibration = publisher.publish_vibration
-            def publish_abnormal_vibration(**kwargs):
+        if device_config.device_id == "SENSOR_POINT002":
+            # Save original method to an attribute so we can call it from the closure
+            publisher._original_publish_vibration = publisher.publish_vibration
+            
+            def publish_abnormal_vibration(self, **kwargs):
                 # Send HIGH vibration to trigger CRITICAL alert (threshold is 1.5g)
                 print(f"\n🚨 {device_config.device_id} - SENDING ABNORMAL VIBRATION DATA")
-                original_publish_vibration(
-                    frequency=random.uniform(5, 8),
-                    amplitude_x=random.uniform(1.8, 2.2),  # HIGH - exceeds 1.5g critical threshold
-                    amplitude_y=random.uniform(1.7, 2.1),
-                    amplitude_z=random.uniform(1.8, 2.2)
+                # Call original with abnormal values (ignore passed kwargs)
+                self._original_publish_vibration(
+                    frequency=random.uniform(12, 16),  # Higher frequency
+                    amplitude_x=random.uniform(1.5, 2.2),  # HIGH - exceeds 1.5g critical threshold
+                    amplitude_y=random.uniform(1.4, 2.1),
+                    amplitude_z=random.uniform(1.5, 2.2)
                 )
-            publisher.publish_vibration = publish_abnormal_vibration
+            
+            # Bind the new method to the instance
+            publisher.publish_vibration = types.MethodType(publish_abnormal_vibration, publisher)
         
         # Run simulation (indefinite, measurement every 15 seconds)
         print(f"\n📍 Starting {device_config.name} ({device_config.device_id})")

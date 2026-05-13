@@ -17,6 +17,14 @@ export default function AlertsPage() {
 
     useEffect(() => {
         fetchAlerts();
+
+        // Setup polling to refresh alerts every 10 seconds
+        const pollInterval = setInterval(() => {
+            fetchAlerts();
+        }, 10000);
+
+        // Cleanup interval when component unmounts
+        return () => clearInterval(pollInterval);
     }, []);
 
     const fetchAlerts = async () => {
@@ -167,276 +175,307 @@ export default function AlertsPage() {
     };
 
     return (
-        <div className="admin-page">
-            <div className="admin-header">
-                <h1>
-                    <AlertCircle size={28} />
-                    Quản Lý Cảnh Báo
-                </h1>
-                <p className="subtitle">Xem và quản lý các cảnh báo từ hệ thống giám sát</p>
+        <div className="min-h-screen bg-background">
+            {/* Header */}
+            <header className="border-b bg-card py-4 mb-4">
+                <div className="px-4 py-4">
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <AlertCircle className="w-8 h-8 text-primary" />
+                            Quản Lý Cảnh Báo
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Xem và quản lý các cảnh báo từ hệ thống giám sát
+                        </p>
+                    </div>
+                </div>
+            </header>
+
+            {/* Overview Stats */}
+            <div className="px-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Card className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-blue-600/10">
+                                <AlertCircle className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm text-muted-foreground">Tổng Cảnh Báo</p>
+                                <p className="text-2xl font-semibold">{alerts.length}</p>
+                            </div>
+                        </div>
+                    </Card>
+                    <Card className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-red-600/10">
+                                <XCircle className="w-6 h-6 text-red-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm text-muted-foreground">Chưa Xử Lý</p>
+                                <p className="text-2xl font-semibold text-red-600">
+                                    {alerts.filter(a => !a.acknowledged).length}
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                    <Card className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-green-600/10">
+                                <CheckCircle2 className="w-6 h-6 text-green-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm text-muted-foreground">Đã Xử Lý</p>
+                                <p className="text-2xl font-semibold text-green-600">
+                                    {alerts.filter(a => a.acknowledged).length}
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                    <Card className="p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-orange-600/10">
+                                <AlertCircle className="w-6 h-6 text-orange-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm text-muted-foreground">Mức Độ Cao</p>
+                                <p className="text-2xl font-semibold text-orange-600">
+                                    {alerts.filter(a => ['critical', 'high'].includes(a.severity)).length}
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
             </div>
 
             {/* Filters */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Filter size={20} />
-                        Bộ Lọc
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        <div>
-                            <label className="text-sm font-medium">Trạng Thái</label>
-                            <select
-                                value={filterStatus}
-                                onChange={(e) => handleFilterChange(setFilterStatus, e.target.value)}
-                                className="w-full mt-1 px-3 py-2 border rounded-md bg-background text-foreground"
-                            >
-                                <option value="all">Tất cả</option>
-                                <option value="acknowledged">Đã xử lý</option>
-                                <option value="unacknowledged">Chưa xử lý</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">Thiết Bị</label>
-                            <Input
-                                placeholder="Tìm kiếm thiết bị..."
-                                value={filterDevice}
-                                onChange={(e) => handleFilterChange(setFilterDevice, e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">Loại Cảm Biến</label>
-                            <select
-                                value={filterSensorType}
-                                onChange={(e) => handleFilterChange(setFilterSensorType, e.target.value)}
-                                className="w-full mt-1 px-3 py-2 border rounded-md bg-background text-foreground"
-                            >
-                                <option value="">Tất cả</option>
-                                <option value="tilt">Tilt (Nghiêng)</option>
-                                <option value="vibration">Vibration (Rung)</option>
-                                <option value="displacement">Displacement (Chuyển vị)</option>
-                                <option value="rainfall">Rainfall (Mưa)</option>
-                                <option value="temperature">Temperature (Nhiệt độ)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">Mức Độ</label>
-                            <select
-                                value={filterSeverity}
-                                onChange={(e) => handleFilterChange(setFilterSeverity, e.target.value)}
-                                className="w-full mt-1 px-3 py-2 border rounded-md bg-background text-foreground"
-                            >
-                                <option value="">Tất cả</option>
-                                <option value="critical">Nguy Hiểm</option>
-                                <option value="high">Cao</option>
-                                <option value="medium">Trung Bình</option>
-                                <option value="low">Thấp</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">&nbsp;</label>
-                            <Button
-                                onClick={() => {
-                                    setFilterStatus('all');
-                                    setFilterDevice('');
-                                    setFilterSensorType('');
-                                    setFilterSeverity('');
-                                    setCurrentPage(1);
-                                }}
-                                variant="outline"
-                                className="w-full"
-                            >
-                                Xóa Bộ Lọc
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Separator />
-
-            {/* Alerts Table */}
-            {loading ? (
-                <Card>
-                    <CardContent className="pt-6">
-                        <p>Đang tải cảnh báo...</p>
-                    </CardContent>
-                </Card>
-            ) : filteredAlerts.length === 0 ? (
-                <Card>
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-muted-foreground">Không có cảnh báo nào</p>
-                    </CardContent>
-                </Card>
-            ) : (
+            <div className="px-4">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Danh Sách Cảnh Báo ({filteredAlerts.length})</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <Filter size={20} />
+                            Bộ Lọc
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Mức Độ</TableHead>
-                                        <TableHead>Thiết Bị</TableHead>
-                                        <TableHead>Cảm Biến</TableHead>
-                                        <TableHead>Thông Báo</TableHead>
-                                        <TableHead className="text-right">Giá Trị</TableHead>
-                                        <TableHead className="text-right">Ngưỡng</TableHead>
-                                        <TableHead>Thời Gian</TableHead>
-                                        <TableHead>Trạng Thái</TableHead>
-                                        <TableHead>Hành Động</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {paginatedAlerts.map((alert) => (
-                                        <TableRow key={alert.id}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    {getSeverityIcon(alert.severity)}
-                                                    <Badge variant={getSeverityBadge(alert.severity)}>
-                                                        {getSeverityLabel(alert.severity)}
-                                                    </Badge>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-mono text-sm">
-                                                {alert.device_id}
-                                            </TableCell>
-                                            <TableCell className="capitalize">
-                                                {alert.sensor_type}
-                                            </TableCell>
-                                            <TableCell>{alert.message}</TableCell>
-                                            <TableCell className="text-right font-semibold whitespace-nowrap">
-                                                {typeof alert.value === 'number' ? alert.value.toFixed(2) : alert.value}
-                                            </TableCell>
-                                            <TableCell className="text-right font-semibold whitespace-nowrap">
-                                                {typeof alert.threshold === 'number' ? alert.threshold.toFixed(2) : alert.threshold}
-                                            </TableCell>
-                                            <TableCell className="text-sm whitespace-nowrap">
-                                                {(() => {
-                                                    const date = new Date(alert.timestamp);
-                                                    date.setHours(date.getHours() + 7);
-                                                    return date.toLocaleString('vi-VN', {
-                                                        year: 'numeric',
-                                                        month: '2-digit',
-                                                        day: '2-digit',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                        second: '2-digit'
-                                                    });
-                                                })()}
-                                            </TableCell>
-                                            <TableCell>
-                                                {alert.acknowledged ? (
-                                                    <Badge variant="outline" className="bg-green-50 text-green-700">
-                                                        ✓ Đã xử lý
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="destructive">
-                                                        Chưa xử lý
-                                                    </Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex gap-2">
-                                                    {!alert.acknowledged && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => acknowledgeAlert(alert.id)}
-                                                            title="Đánh dấu cảnh báo đã xử lý"
-                                                        >
-                                                            <CheckCircle2 size={16} />
-                                                        </Button>
-                                                    )}
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    onClick={() => resolveAlert(alert.id)}
-                                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>Xóa cảnh báo</TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        {/* Pagination Controls */}
-                        {totalPages > 1 && (
-                            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                                <p className="text-sm text-muted-foreground">
-                                    Trang {currentPage} của {totalPages} | Hiển thị {startIndex + 1}-{Math.min(endIndex, filteredAlerts.length)} trên {filteredAlerts.length} cảnh báo
-                                </p>
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                                        disabled={currentPage === 1}
-                                        variant="outline"
-                                        size="sm"
-                                    >
-                                        ← Trước
-                                    </Button>
-                                    <Button
-                                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                                        disabled={currentPage === totalPages}
-                                        variant="outline"
-                                        size="sm"
-                                    >
-                                        Sau →
-                                    </Button>
-                                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <div>
+                                <label className="text-sm font-medium">Trạng Thái</label>
+                                <select
+                                    value={filterStatus}
+                                    onChange={(e) => handleFilterChange(setFilterStatus, e.target.value)}
+                                    className="w-full mt-1 px-3 py-2 border rounded-md bg-background text-foreground"
+                                >
+                                    <option value="all">Tất cả</option>
+                                    <option value="acknowledged">Đã xử lý</option>
+                                    <option value="unacknowledged">Chưa xử lý</option>
+                                </select>
                             </div>
-                        )}
+                            <div>
+                                <label className="text-sm font-medium">Thiết Bị</label>
+                                <Input
+                                    placeholder="Tìm kiếm thiết bị..."
+                                    value={filterDevice}
+                                    onChange={(e) => handleFilterChange(setFilterDevice, e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Loại Cảm Biến</label>
+                                <select
+                                    value={filterSensorType}
+                                    onChange={(e) => handleFilterChange(setFilterSensorType, e.target.value)}
+                                    className="w-full mt-1 px-3 py-2 border rounded-md bg-background text-foreground"
+                                >
+                                    <option value="">Tất cả</option>
+                                    <option value="tilt">Tilt (Nghiêng)</option>
+                                    <option value="vibration">Vibration (Rung)</option>
+                                    <option value="displacement">Displacement (Chuyển vị)</option>
+                                    <option value="rainfall">Rainfall (Mưa)</option>
+                                    <option value="temperature">Temperature (Nhiệt độ)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Mức Độ</label>
+                                <select
+                                    value={filterSeverity}
+                                    onChange={(e) => handleFilterChange(setFilterSeverity, e.target.value)}
+                                    className="w-full mt-1 px-3 py-2 border rounded-md bg-background text-foreground"
+                                >
+                                    <option value="">Tất cả</option>
+                                    <option value="critical">Nguy Hiểm</option>
+                                    <option value="high">Cao</option>
+                                    <option value="medium">Trung Bình</option>
+                                    <option value="low">Thấp</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">&nbsp;</label>
+                                <Button
+                                    onClick={() => {
+                                        setFilterStatus('all');
+                                        setFilterDevice('');
+                                        setFilterSensorType('');
+                                        setFilterSeverity('');
+                                        setCurrentPage(1);
+                                    }}
+                                    variant="outline"
+                                    className="w-full"
+                                >
+                                    Xóa Bộ Lọc
+                                </Button>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
-            )}
 
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-                <Card>
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-sm text-muted-foreground">Tổng Cảnh Báo</p>
-                        <p className="text-3xl font-bold">{alerts.length}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-sm text-muted-foreground">Chưa Xử Lý</p>
-                        <p className="text-3xl font-bold text-red-600">
-                            {alerts.filter(a => !a.acknowledged).length}
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-sm text-muted-foreground">Đã Xử Lý</p>
-                        <p className="text-3xl font-bold text-green-600">
-                            {alerts.filter(a => a.acknowledged).length}
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="pt-6 text-center">
-                        <p className="text-sm text-muted-foreground">Mức Độ Cao</p>
-                        <p className="text-3xl font-bold text-orange-600">
-                            {alerts.filter(a => ['critical', 'high'].includes(a.severity)).length}
-                        </p>
-                    </CardContent>
-                </Card>
+                <Separator />
+
+                {/* Alerts Table */}
+                {loading ? (
+                    <Card>
+                        <CardContent className="pt-6">
+                            <p>Đang tải cảnh báo...</p>
+                        </CardContent>
+                    </Card>
+                ) : filteredAlerts.length === 0 ? (
+                    <Card>
+                        <CardContent className="pt-6 text-center">
+                            <p className="text-muted-foreground">Không có cảnh báo nào</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Danh Sách Cảnh Báo ({filteredAlerts.length})</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Mức Độ</TableHead>
+                                            <TableHead>Thiết Bị</TableHead>
+                                            <TableHead>Cảm Biến</TableHead>
+                                            <TableHead>Thông Báo</TableHead>
+                                            <TableHead className="text-right">Giá Trị</TableHead>
+                                            <TableHead className="text-right">Ngưỡng</TableHead>
+                                            <TableHead>Thời Gian</TableHead>
+                                            <TableHead>Trạng Thái</TableHead>
+                                            <TableHead>Hành Động</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {paginatedAlerts.map((alert) => (
+                                            <TableRow key={alert.id}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        {getSeverityIcon(alert.severity)}
+                                                        <Badge variant={getSeverityBadge(alert.severity)}>
+                                                            {getSeverityLabel(alert.severity)}
+                                                        </Badge>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-sm">
+                                                    {alert.device_id}
+                                                </TableCell>
+                                                <TableCell className="capitalize">
+                                                    {alert.sensor_type}
+                                                </TableCell>
+                                                <TableCell>{alert.message}</TableCell>
+                                                <TableCell className="text-right font-semibold whitespace-nowrap">
+                                                    {typeof alert.value === 'number' ? alert.value.toFixed(2) : alert.value}
+                                                </TableCell>
+                                                <TableCell className="text-right font-semibold whitespace-nowrap">
+                                                    {typeof alert.threshold === 'number' ? alert.threshold.toFixed(2) : alert.threshold}
+                                                </TableCell>
+                                                <TableCell className="text-sm whitespace-nowrap">
+                                                    {(() => {
+                                                        const date = new Date(alert.timestamp);
+                                                        date.setHours(date.getHours() + 7);
+                                                        return date.toLocaleString('vi-VN', {
+                                                            year: 'numeric',
+                                                            month: '2-digit',
+                                                            day: '2-digit',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                            second: '2-digit'
+                                                        });
+                                                    })()}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {alert.acknowledged ? (
+                                                        <Badge variant="outline" className="bg-green-50 text-green-700">
+                                                            ✓ Đã xử lý
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive">
+                                                            Chưa xử lý
+                                                        </Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex gap-2">
+                                                        {!alert.acknowledged && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => acknowledgeAlert(alert.id)}
+                                                                title="Đánh dấu cảnh báo đã xử lý"
+                                                            >
+                                                                <CheckCircle2 size={16} />
+                                                            </Button>
+                                                        )}
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        onClick={() => resolveAlert(alert.id)}
+                                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>Xóa cảnh báo</TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                                    <p className="text-sm text-muted-foreground">
+                                        Trang {currentPage} của {totalPages} | Hiển thị {startIndex + 1}-{Math.min(endIndex, filteredAlerts.length)} trên {filteredAlerts.length} cảnh báo
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                            disabled={currentPage === 1}
+                                            variant="outline"
+                                            size="sm"
+                                        >
+                                            ← Trước
+                                        </Button>
+                                        <Button
+                                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                                            disabled={currentPage === totalPages}
+                                            variant="outline"
+                                            size="sm"
+                                        >
+                                            Sau →
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     );

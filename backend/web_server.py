@@ -488,6 +488,84 @@ def get_statistics():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/statistics/dashboard', methods=['GET'])
+@require_auth()
+def get_dashboard_statistics():
+    """Get dashboard statistics including device activity (7 days) and sensor distribution (requires authentication)"""
+    try:
+        # Calculate date range for 7 days
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        
+        # Get readings for the past 7 days
+        readings_result = db.get_readings_with_filters(
+            start_date=start_date.isoformat(),
+            end_date=end_date.isoformat(),
+            limit=10000,  # Get large number for aggregation
+            offset=0
+        )
+        
+        readings = readings_result.get('data', [])
+        
+        # Process device activity data (group by day and device)
+        device_activity_by_day = {}
+        sensor_count_by_type = {}
+        
+        for reading in readings:
+            # Device activity
+            timestamp = datetime.fromisoformat(reading.get('timestamp', ''))
+            day_key = timestamp.strftime('%Y-%m-%d')
+            device_id = reading.get('device_id')
+            
+            if day_key not in device_activity_by_day:
+                device_activity_by_day[day_key] = set()
+            device_activity_by_day[day_key].add(device_id)
+            
+            # Sensor distribution
+            sensor_type = reading.get('sensor_type', 'unknown')
+            sensor_count_by_type[sensor_type] = sensor_count_by_type.get(sensor_type, 0) + 1
+        
+        # Get total devices once
+        all_devices = db.get_all_devices()
+        total_devices = len(all_devices)
+        
+        # Format device activity for chart (last 7 days)
+        device_activity_chart = []
+        for i in range(7):
+            day = start_date + timedelta(days=i)
+            day_key = day.strftime('%Y-%m-%d')
+            day_name = f"Ngày {i + 1}"
+            active_count = len(device_activity_by_day.get(day_key, set()))
+            
+            # Count readings (as proxy for alerts) for this day
+            alerts_count = sum(1 for r in readings 
+                             if datetime.fromisoformat(r.get('timestamp', '')).strftime('%Y-%m-%d') == day_key)
+            
+            device_activity_chart.append({
+                'name': day_name,
+                'active': active_count,
+                'total': total_devices,
+                'alerts': max(0, alerts_count // 10)  # Simplify to approximate alert count
+            })
+        
+        # Format sensor distribution for chart
+        sensor_distribution = []
+        for sensor_type in ['tilt', 'vibration', 'displacement', 'rainfall', 'temperature', 'gnss']:
+            count = sensor_count_by_type.get(sensor_type, 0)
+            sensor_distribution.append({
+                'name': sensor_type,
+                'value': count
+            })
+        
+        return jsonify({
+            'device_activity': device_activity_chart,
+            'sensor_distribution': sensor_distribution
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/sensor-history', methods=['GET'])
 @require_auth()
 def get_sensor_history():
@@ -1147,6 +1225,50 @@ def create_user():
             return jsonify({'error': 'Failed to create user'}), 500
     except Exception as e:
         print(f"Error creating user: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ============ AUDIT LOGS ENDPOINTS ============
+
+@app.route('/api/audit-logs', methods=['GET'])
+@require_auth()
+@require_permission('view:audit_logs')
+def get_audit_logs():
+    """Get audit logs with filtering and pagination (Admin only)"""
+    try:
+        # Pagination
+        limit = request.args.get('limit', 100, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        # Filters
+        user_id = request.args.get('user_id', None, type=int)
+        username = request.args.get('username', None, type=str)
+        action = request.args.get('action', None, type=str)
+        resource_type = request.args.get('resource_type', None, type=str)
+        ip_address = request.args.get('ip_address', None, type=str)
+        start_date = request.args.get('start_date', None, type=str)
+        end_date = request.args.get('end_date', None, type=str)
+        
+        # Validate pagination parameters
+        limit = min(limit, 500)  # Max 500 records per request
+        offset = max(offset, 0)
+        
+        result = db.get_audit_logs(
+            limit=limit, 
+            offset=offset, 
+            user_id=user_id,
+            username=username,
+            action=action,
+            resource_type=resource_type,
+            ip_address=ip_address,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        return jsonify({
+            'logs': result.get('data', []),
+            'pagination': result.get('pagination', {})
+        }), 200
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/devices/by-province', methods=['GET'])

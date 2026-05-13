@@ -302,6 +302,67 @@ class AlertManager:
         except Exception as e:
             return DangerLevel.LOW, f"Error checking temperature: {str(e)}", 0
     
+    def get_threshold_for_alert(self, sensor_type: str, danger_level: DangerLevel, value: float, data: Dict = None) -> float:
+        """Get the threshold that was exceeded for an alert"""
+        try:
+            if sensor_type == 'tilt':
+                roll = float(data.get('roll', 0) if data else 0)
+                pitch = float(data.get('pitch', 0) if data else 0)
+                
+                roll_abs = abs(roll)
+                pitch_abs = abs(pitch)
+                
+                if danger_level == DangerLevel.CRITICAL:
+                    return max(self.thresholds['tilt']['roll_critical'], self.thresholds['tilt']['pitch_critical'])
+                elif danger_level == DangerLevel.HIGH:
+                    return max(self.thresholds['tilt']['roll_high'], self.thresholds['tilt']['pitch_high'])
+                elif danger_level == DangerLevel.MEDIUM:
+                    return max(self.thresholds['tilt']['roll_medium'], self.thresholds['tilt']['pitch_medium'])
+                elif danger_level == DangerLevel.LOW:
+                    return max(self.thresholds['tilt']['roll_low'], self.thresholds['tilt']['pitch_low'])
+                    
+            elif sensor_type == 'vibration':
+                if danger_level == DangerLevel.CRITICAL:
+                    return self.thresholds['vibration']['amplitude_critical']
+                elif danger_level == DangerLevel.HIGH:
+                    return self.thresholds['vibration']['amplitude_high']
+                elif danger_level == DangerLevel.MEDIUM:
+                    return self.thresholds['vibration']['amplitude_medium']
+                elif danger_level == DangerLevel.LOW:
+                    return self.thresholds['vibration']['amplitude_low']
+                    
+            elif sensor_type == 'displacement':
+                if danger_level == DangerLevel.CRITICAL:
+                    return self.thresholds['displacement']['cumulative_critical']
+                elif danger_level == DangerLevel.HIGH:
+                    return self.thresholds['displacement']['cumulative_high']
+                elif danger_level == DangerLevel.MEDIUM:
+                    return self.thresholds['displacement']['cumulative_medium']
+                elif danger_level == DangerLevel.LOW:
+                    return self.thresholds['displacement']['cumulative_low']
+                    
+            elif sensor_type == 'rainfall':
+                if danger_level == DangerLevel.CRITICAL:
+                    return self.thresholds['rainfall']['cumulative_1h_critical']
+                elif danger_level == DangerLevel.HIGH:
+                    return self.thresholds['rainfall']['cumulative_1h_high']
+                elif danger_level == DangerLevel.MEDIUM:
+                    return self.thresholds['rainfall']['cumulative_1h_medium']
+                elif danger_level == DangerLevel.LOW:
+                    return self.thresholds['rainfall']['cumulative_1h_low']
+                    
+            elif sensor_type == 'temperature':
+                if danger_level == DangerLevel.CRITICAL:
+                    return self.thresholds['temperature']['temp_max_critical']
+                elif danger_level == DangerLevel.HIGH:
+                    return self.thresholds['temperature']['temp_max_high']
+                elif danger_level == DangerLevel.LOW:
+                    return self.thresholds['temperature']['temp_max_low']
+        except Exception as e:
+            print(f"Error getting threshold for alert: {str(e)}")
+        
+        return 0.0
+    
     def check_sensor(self, device_id: str, sensor_type: str, data: Dict) -> Optional[Tuple[DangerLevel, str, float]]:
         """Check sensor data and return alert if triggered"""
         if sensor_type == 'tilt':
@@ -523,17 +584,17 @@ class AlertManager:
             
             # Count active alerts by level
             stats = {
-                'total_active': 0,
+                'active_alerts': 0,
                 'critical': 0,
                 'high': 0,
                 'medium': 0,
                 'low': 0,
                 'total_all_time': 0,
-                'last_24h': 0
+                'total_alerts_today': 0
             }
             
             cursor.execute('SELECT COUNT(*) as count FROM alerts WHERE acknowledged = 0')
-            stats['total_active'] = cursor.fetchone()['count']
+            stats['active_alerts'] = cursor.fetchone()['count']
             
             for level in ['critical', 'high', 'medium', 'low']:
                 cursor.execute(
@@ -547,9 +608,9 @@ class AlertManager:
             
             cursor.execute('''
                 SELECT COUNT(*) as count FROM alerts 
-                WHERE timestamp > datetime('now', '-24 hours')
+                WHERE DATE(timestamp) = DATE('now')
             ''')
-            stats['last_24h'] = cursor.fetchone()['count']
+            stats['total_alerts_today'] = cursor.fetchone()['count']
             
             conn.close()
             return stats

@@ -33,23 +33,27 @@ export const StatisticsPage = () => {
         const fetchStats = async () => {
             try {
                 const token = localStorage.getItem('access_token');
-                const response = await axios.get('/api/statistics', {
+
+                // Fetch main statistics
+                const statsResponse = await axios.get('/api/statistics', {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                setStats(response.data);
+                setStats(statsResponse.data);
 
-                // Prepare sensor distribution data
-                if (response.data.sensor_types) {
-                    const sensorDistribution = response.data.sensor_types.map(type => ({
-                        name: type,
-                        value: Math.floor(Math.random() * 50) + 10 // Mock data
-                    }));
-                    setSensorData(sensorDistribution);
+                // Fetch dashboard statistics (device activity and sensor distribution)
+                const dashboardResponse = await axios.get('/api/statistics/dashboard', {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+
+                // Set device activity chart data
+                if (dashboardResponse.data.device_activity) {
+                    setChartData(dashboardResponse.data.device_activity);
                 }
 
-                // Prepare device activity chart data
-                const deviceChartData = generateChartData();
-                setChartData(deviceChartData);
+                // Set sensor distribution data
+                if (dashboardResponse.data.sensor_distribution) {
+                    setSensorData(dashboardResponse.data.sensor_distribution);
+                }
             } catch (error) {
                 console.error('Error fetching statistics:', error);
                 setStats({
@@ -59,16 +63,25 @@ export const StatisticsPage = () => {
                     last_device_update: '2026-05-05T14:30:00',
                 });
 
-                // Generate mock data
-                const deviceChartData = generateChartData();
-                setChartData(deviceChartData);
+                // Fallback with mock data
+                const mockDeviceChartData = [
+                    { name: 'Ngày 1', active: 12, total: 15, alerts: 2 },
+                    { name: 'Ngày 2', active: 13, total: 15, alerts: 1 },
+                    { name: 'Ngày 3', active: 14, total: 15, alerts: 3 },
+                    { name: 'Ngày 4', active: 12, total: 15, alerts: 2 },
+                    { name: 'Ngày 5', active: 15, total: 15, alerts: 4 },
+                    { name: 'Ngày 6', active: 14, total: 15, alerts: 1 },
+                    { name: 'Ngày 7', active: 13, total: 15, alerts: 2 }
+                ];
+                setChartData(mockDeviceChartData);
+
                 setSensorData([
-                    { name: 'tilt', value: 25 },
-                    { name: 'vibration', value: 20 },
-                    { name: 'displacement', value: 18 },
-                    { name: 'rainfall', value: 22 },
-                    { name: 'temperature', value: 19 },
-                    { name: 'gnss', value: 15 }
+                    { name: 'tilt', value: 250 },
+                    { name: 'vibration', value: 200 },
+                    { name: 'displacement', value: 180 },
+                    { name: 'rainfall', value: 220 },
+                    { name: 'temperature', value: 190 },
+                    { name: 'gnss', value: 150 }
                 ]);
             } finally {
                 setLoading(false);
@@ -88,15 +101,6 @@ export const StatisticsPage = () => {
 
         fetchStats();
     }, [alertStats]);
-
-    const generateChartData = () => {
-        return Array.from({ length: 7 }, (_, i) => ({
-            name: `Ngày ${i + 1}`,
-            active: Math.floor(Math.random() * 5) + 10,
-            total: 15,
-            alerts: Math.floor(Math.random() * 8)
-        }));
-    };
 
     const getAlertStats = () => {
         const total = alertLevelData.reduce((sum, item) => sum + item.value, 0);
@@ -120,28 +124,32 @@ export const StatisticsPage = () => {
     const { total: totalAlerts, critical: criticalAlerts, warning: warningAlerts } = getAlertStats();
 
     return (
-        <div className="admin-page">
+        <div className="min-h-screen bg-background">
             {/* Header */}
             <header className="border-b bg-card py-4 mb-4">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <BarChart3 className="w-8 h-8 text-primary" />
-                        Thống Kê Hệ Thống
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Tổng quan về các thiết bị, cảm biến và cảnh báo nguy hiểm
-                    </p>
+                <div className="px-4 py-4">
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <BarChart3 className="w-8 h-8 text-primary" />
+                            Thống Kê Hệ Thống
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Tổng quan về các thiết bị, cảm biến và cảnh báo nguy hiểm
+                        </p>
+                    </div>
                 </div>
             </header>
 
             {loading ? (
-                <Card>
-                    <CardContent className="pt-6">
-                        <p>Đang tải thống kê...</p>
-                    </CardContent>
-                </Card>
+                <div className="px-4">
+                    <Card>
+                        <CardContent className="pt-6">
+                            <p>Đang tải thống kê...</p>
+                        </CardContent>
+                    </Card>
+                </div>
             ) : stats ? (
-                <div className="space-y-6">
+                <div className="px-4 space-y-6">
                     {/* Key Metrics Cards */}
                     <div className="stats-grid">
                         {/* Total Devices */}
@@ -359,12 +367,14 @@ export const StatisticsPage = () => {
                     </div>
                 </div>
             ) : (
-                <Card>
-                    <CardContent className="pt-6 text-center">
-                        <h2 className="text-lg font-semibold text-destructive mb-2">Lỗi</h2>
-                        <p className="text-muted-foreground">Không thể tải thống kê. Vui lòng thử lại.</p>
-                    </CardContent>
-                </Card>
+                <div className="px-4">
+                    <Card>
+                        <CardContent className="pt-6 text-center">
+                            <h2 className="text-lg font-semibold text-destructive mb-2">Lỗi</h2>
+                            <p className="text-muted-foreground">Không thể tải thống kê. Vui lòng thử lại.</p>
+                        </CardContent>
+                    </Card>
+                </div>
             )}
         </div>
     );

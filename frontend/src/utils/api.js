@@ -199,6 +199,37 @@ export const userAPI = {
     },
 };
 
+// Audit Logs APIs
+export const auditAPI = {
+    getAuditLogs: async (params = {}) => {
+        const { data } = await api.get('/api/audit-logs', { params });
+        return data;
+    },
+
+    getAuditLogsByUser: async (userId, params = {}) => {
+        const { data } = await api.get('/api/audit-logs', {
+            params: { ...params, user_id: userId }
+        });
+        return data;
+    },
+
+    getAuditLogsFiltered: async (filters = {}) => {
+        const params = {
+            limit: filters.limit || 100,
+            offset: filters.offset || 0,
+            ...(filters.userId && { user_id: filters.userId }),
+            ...(filters.username && { username: filters.username }),
+            ...(filters.action && { action: filters.action }),
+            ...(filters.resourceType && { resource_type: filters.resourceType }),
+            ...(filters.ipAddress && { ip_address: filters.ipAddress }),
+            ...(filters.startDate && { start_date: filters.startDate }),
+            ...(filters.endDate && { end_date: filters.endDate }),
+        };
+        const { data } = await api.get('/api/audit-logs', { params });
+        return data;
+    },
+};
+
 // Health check
 export const systemAPI = {
     healthCheck: async () => {
