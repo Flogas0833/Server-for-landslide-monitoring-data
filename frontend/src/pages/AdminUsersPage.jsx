@@ -8,9 +8,8 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { translateRole } from '../utils/helpers';
 import { userAPI } from '../utils/api';
+import { VIETNAM_PROVINCES } from '../constants/provinces';
 import '../styles/adminPages.css';
-
-const AVAILABLE_PROVINCES = ['Hà Nội', 'Hải Phòng', 'TP. Hồ Chí Minh'];
 
 export const AdminUsersPage = () => {
     const { isAdmin } = useRoleCheck();
@@ -174,7 +173,7 @@ export const AdminUsersPage = () => {
                                     className="form-select"
                                 >
                                     <option value="">-- Chọn Tỉnh Thành --</option>
-                                    {AVAILABLE_PROVINCES.map(province => (
+                                    {VIETNAM_PROVINCES.map(province => (
                                         <option key={province} value={province}>{province}</option>
                                     ))}
                                 </select>
@@ -222,7 +221,7 @@ export const AdminUsersPage = () => {
                                                         className="form-select-inline"
                                                     >
                                                         <option value="">-- Không có --</option>
-                                                        {AVAILABLE_PROVINCES.map(province => (
+                                                        {VIETNAM_PROVINCES.map(province => (
                                                             <option key={province} value={province}>{province}</option>
                                                         ))}
                                                     </select>

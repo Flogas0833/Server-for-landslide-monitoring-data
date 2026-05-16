@@ -806,11 +806,27 @@ def auto_login():
 
 @app.route('/api/alerts', methods=['GET'])
 def get_alerts():
-    """Get current active alerts"""
+    """Get alerts - supports filtering by acknowledgement status
+    
+    Query parameters:
+        - level: Filter by danger level (optional)
+        - limit: Max results (-1 for no limit, default: -1)
+        - acknowledged: Filter by status (optional)
+            - 'true': acknowledged alerts only
+            - 'false': unacknowledged alerts only  
+            - not specified: only unacknowledged (backward compatible)
+    """
     try:
         danger_level = request.args.get('level', None, type=str)
         limit = request.args.get('limit', -1, type=int)
-        alerts = alert_manager.get_active_alerts(danger_level=danger_level, limit=limit)
+        acknowledged_param = request.args.get('acknowledged', None, type=str)
+        
+        # Convert string parameter to boolean if provided
+        acknowledged = None
+        if acknowledged_param:
+            acknowledged = acknowledged_param.lower() == 'true'
+        
+        alerts = alert_manager.get_active_alerts(danger_level=danger_level, limit=limit, acknowledged=acknowledged)
         
         return jsonify({
             'alerts': alerts,
@@ -1318,8 +1334,8 @@ def get_alerts_by_province():
         if not province:
             return jsonify({'error': 'Province parameter required'}), 400
         
-        # Get alerts
-        alerts = alert_manager.get_active_alerts(danger_level=danger_level, limit=limit)
+        # Get alerts (unacknowledged only for backward compatibility)
+        alerts = alert_manager.get_active_alerts(danger_level=danger_level, limit=limit, acknowledged=False)
         
         # Filter alerts by province
         devices_in_province = db.get_devices_by_province(province)

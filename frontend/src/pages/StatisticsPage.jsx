@@ -6,7 +6,7 @@ import axios from 'axios';
 import { BarChart3, Shield, AlertTriangle, TrendingUp, Activity } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Separator } from '../components/ui';
 import {
-    BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+    BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import '../styles/adminPages.css';
@@ -17,8 +17,6 @@ export const StatisticsPage = () => {
     const { data: alertStats, isLoading: alertsLoading } = useAlertStats();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [chartData, setChartData] = useState([]);
-    const [sensorData, setSensorData] = useState([]);
     const [alertLevelData, setAlertLevelData] = useState([]);
 
     const SENSOR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
@@ -39,50 +37,19 @@ export const StatisticsPage = () => {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 setStats(statsResponse.data);
+                // Save to localStorage for fallback use
+                localStorage.setItem('last_statistics', JSON.stringify(statsResponse.data));
 
                 // Fetch dashboard statistics (device activity and sensor distribution)
-                const dashboardResponse = await axios.get('/api/statistics/dashboard', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
-                // Set device activity chart data
-                if (dashboardResponse.data.device_activity) {
-                    setChartData(dashboardResponse.data.device_activity);
-                }
-
-                // Set sensor distribution data
-                if (dashboardResponse.data.sensor_distribution) {
-                    setSensorData(dashboardResponse.data.sensor_distribution);
-                }
             } catch (error) {
                 console.error('Error fetching statistics:', error);
-                setStats({
-                    total_devices: 15,
-                    active_devices: 12,
-                    sensor_types: ['tilt', 'vibration', 'displacement', 'rainfall', 'temperature', 'gnss'],
-                    last_device_update: '2026-05-05T14:30:00',
-                });
 
-                // Fallback with mock data
-                const mockDeviceChartData = [
-                    { name: 'Ngày 1', active: 12, total: 15, alerts: 2 },
-                    { name: 'Ngày 2', active: 13, total: 15, alerts: 1 },
-                    { name: 'Ngày 3', active: 14, total: 15, alerts: 3 },
-                    { name: 'Ngày 4', active: 12, total: 15, alerts: 2 },
-                    { name: 'Ngày 5', active: 15, total: 15, alerts: 4 },
-                    { name: 'Ngày 6', active: 14, total: 15, alerts: 1 },
-                    { name: 'Ngày 7', active: 13, total: 15, alerts: 2 }
-                ];
-                setChartData(mockDeviceChartData);
+                // Try to load last saved data from localStorage
+                const lastStats = localStorage.getItem('last_statistics');
 
-                setSensorData([
-                    { name: 'tilt', value: 250 },
-                    { name: 'vibration', value: 200 },
-                    { name: 'displacement', value: 180 },
-                    { name: 'rainfall', value: 220 },
-                    { name: 'temperature', value: 190 },
-                    { name: 'gnss', value: 150 }
-                ]);
+                if (lastStats) {
+                    setStats(JSON.parse(lastStats));
+                }
             } finally {
                 setLoading(false);
             }
@@ -207,58 +174,6 @@ export const StatisticsPage = () => {
                                     </div>
                                     <div className="text-3xl">📊</div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Charts Section */}
-                    <div className="charts-section">
-                        {/* Device Activity Chart */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Hoạt Động Thiết Bị (7 Ngày Qua)</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <LineChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="name" />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Legend />
-                                        <Line type="monotone" dataKey="active" stroke="#22c55e" name="Hoạt Động" strokeWidth={2} />
-                                        <Line type="monotone" dataKey="total" stroke="#3b82f6" name="Tổng Cộng" strokeWidth={2} />
-                                        <Line type="monotone" dataKey="alerts" stroke="#ef4444" name="Cảnh Báo" strokeWidth={2} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </CardContent>
-                        </Card>
-
-                        {/* Sensor Distribution */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Phân Bố Các Loại Cảm Biến</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <PieChart>
-                                        <Pie
-                                            data={sensorData}
-                                            cx="50%"
-                                            cy="50%"
-                                            labelLine={false}
-                                            label={({ name, value }) => `${name}: ${value}`}
-                                            outerRadius={100}
-                                            fill="#8884d8"
-                                            dataKey="value"
-                                        >
-                                            {sensorData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={SENSOR_COLORS[index % SENSOR_COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                    </PieChart>
-                                </ResponsiveContainer>
                             </CardContent>
                         </Card>
                     </div>

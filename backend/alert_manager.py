@@ -398,29 +398,42 @@ class AlertManager:
             print(f"Error creating alert: {str(e)}")
             return False
     
-    def get_active_alerts(self, danger_level: Optional[str] = None, limit: int = -1) -> List[Dict]:
-        """Get all active (unacknowledged) alerts"""
+    def get_active_alerts(self, danger_level: Optional[str] = None, limit: int = -1, acknowledged: Optional[bool] = None) -> List[Dict]:
+        """Get alerts with optional filtering by acknowledgement status
+        
+        Args:
+            danger_level: Filter by danger level (optional)
+            limit: Maximum number of results (-1 for no limit)
+            acknowledged: Filter by acknowledgement status (None = all, True = acknowledged only, False = unacknowledged only)
+        """
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
             limit_clause = "" if limit == -1 else f"LIMIT {limit}"
             
-            if danger_level:
-                cursor.execute(f'''
-                    SELECT * FROM alerts 
-                    WHERE acknowledged = 0 AND danger_level = ?
-                    ORDER BY timestamp DESC
-                    {limit_clause}
-                ''', (danger_level,))
-            else:
-                cursor.execute(f'''
-                    SELECT * FROM alerts 
-                    WHERE acknowledged = 0
-                    ORDER BY timestamp DESC
-                    {limit_clause}
-                ''')
+            # Build WHERE clause based on parameters
+            where_conditions = []
+            params = []
             
+            if danger_level:
+                where_conditions.append("danger_level = ?")
+                params.append(danger_level)
+            
+            if acknowledged is not None:
+                where_conditions.append("acknowledged = ?")
+                params.append(1 if acknowledged else 0)
+            
+            where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+            
+            query = f'''
+                SELECT * FROM alerts 
+                WHERE {where_clause}
+                ORDER BY timestamp DESC
+                {limit_clause}
+            '''
+            
+            cursor.execute(query, params)
             results = [dict(row) for row in cursor.fetchall()]
             conn.close()
             return results

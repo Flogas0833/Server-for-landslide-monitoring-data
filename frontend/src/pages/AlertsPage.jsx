@@ -8,6 +8,7 @@ import '../styles/adminPages.css';
 export default function AlertsPage() {
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterDevice, setFilterDevice] = useState('');
     const [filterSensorType, setFilterSensorType] = useState('');
@@ -29,6 +30,7 @@ export default function AlertsPage() {
 
     const fetchAlerts = async () => {
         try {
+            setError(null);
             const token = localStorage.getItem('access_token');
             const response = await axios.get('/api/alerts', {
                 params: { limit: 9999999 },
@@ -42,45 +44,8 @@ export default function AlertsPage() {
             setAlerts(alertsWithSeverity);
         } catch (error) {
             console.error('Error fetching alerts:', error);
-            // Mock data fallback
-            setAlerts([
-                {
-                    id: 1,
-                    device_id: 'DEVICE_001',
-                    sensor_type: 'tilt',
-                    severity: 'high',
-                    message: 'Độ nghiêng vượt ngưỡng cảnh báo',
-                    value: 45.5,
-                    threshold: 30,
-                    timestamp: new Date(Date.now() - 1800000).toISOString(),
-                    acknowledged: false,
-                    acknowledged_by: null,
-                },
-                {
-                    id: 2,
-                    device_id: 'DEVICE_002',
-                    sensor_type: 'vibration',
-                    severity: 'medium',
-                    message: 'Rung động bất thường phát hiện',
-                    value: 12.3,
-                    threshold: 10,
-                    timestamp: new Date(Date.now() - 3600000).toISOString(),
-                    acknowledged: true,
-                    acknowledged_by: 'admin',
-                },
-                {
-                    id: 3,
-                    device_id: 'DEVICE_003',
-                    sensor_type: 'displacement',
-                    severity: 'low',
-                    message: 'Chuyển vị tăng dần',
-                    value: 5.2,
-                    threshold: 10,
-                    timestamp: new Date(Date.now() - 7200000).toISOString(),
-                    acknowledged: false,
-                    acknowledged_by: null,
-                },
-            ]);
+            setError(error.response?.data?.message || error.message || 'Lỗi: Không thể tải cảnh báo');
+            setAlerts([]);
         } finally {
             setLoading(false);
         }
@@ -329,8 +294,36 @@ export default function AlertsPage() {
 
                 <Separator />
 
+                {/* Error Display */}
+                {error && (
+                    <Card className="bg-red-50 border-red-200">
+                        <CardContent className="pt-6">
+                            <div className="flex items-center gap-3">
+                                <AlertCircle className="w-6 h-6 text-red-600" />
+                                <div className="flex-1">
+                                    <p className="font-semibold text-red-600">Lỗi tải cảnh báo</p>
+                                    <p className="text-sm text-red-600">{error}</p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                        setLoading(true);
+                                        fetchAlerts();
+                                    }}
+                                >
+                                    Thử lại
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Alerts Table */}
-                {loading ? (
+                {error ? (
+                    // Error already displayed above
+                    null
+                ) : loading ? (
                     <Card>
                         <CardContent className="pt-6">
                             <p>Đang tải cảnh báo...</p>
