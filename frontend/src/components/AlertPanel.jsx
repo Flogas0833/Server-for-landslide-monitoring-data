@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useActiveAlerts, useAcknowledgeAlert } from '../hooks/useAlerts';
 import { formatTime } from '../utils/helpers';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button, Alert, AlertTitle, AlertDescription } from './ui';
@@ -5,7 +6,8 @@ import { AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function AlertPanel({ showActions = true }) {
     const { data: alertData = {} } = useActiveAlerts({ limit: 9999999 });
-    const { mutate: acknowledgeAlert } = useAcknowledgeAlert();
+    const { mutate: acknowledgeAlert, isPending } = useAcknowledgeAlert();
+    const [error, setError] = useState(null);
 
     const alerts = alertData.alerts || [];
     const hasAlerts = alerts.length > 0;
@@ -16,6 +18,19 @@ export default function AlertPanel({ showActions = true }) {
         if (level === 'high') return 'destructive';
         if (level === 'medium') return 'default';
         return 'secondary';
+    };
+
+    const handleAcknowledge = (alertId) => {
+        setError(null);
+        acknowledgeAlert(
+            { alertId },
+            {
+                onError: (err) => {
+                    console.error('Error acknowledging alert:', err);
+                    setError(err.response?.data?.error || 'Lỗi: Không thể đánh dấu cảnh báo đã xử lý');
+                }
+            }
+        );
     };
 
     if (!hasAlerts) {
@@ -48,6 +63,13 @@ export default function AlertPanel({ showActions = true }) {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 max-h-[500px] overflow-y-auto">
+                {error && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="w-4 h-4" />
+                        <AlertTitle>Lỗi</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
                 {alerts.map((alert) => (
                     <Alert key={alert.id} variant="destructive" className="border-destructive/50">
                         <div className="space-y-2">
@@ -71,9 +93,10 @@ export default function AlertPanel({ showActions = true }) {
                                     <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => acknowledgeAlert({ alertId: alert.id })}
+                                        onClick={() => handleAcknowledge(alert.id)}
+                                        disabled={isPending}
                                     >
-                                        Xử lý
+                                        {isPending ? 'Đang xử lý...' : 'Xử lý'}
                                     </Button>
                                 )}
                             </div>

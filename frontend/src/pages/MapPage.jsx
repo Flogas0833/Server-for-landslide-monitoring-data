@@ -4,7 +4,7 @@ import DevicePanel from '../components/DevicePanel';
 import QueryStatus from '../components/QueryStatus';
 import { useDevices, useDeviceDetail } from '../hooks/useDevices';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button, Separator } from '../components/ui';
-import { MapPin, Gauge } from 'lucide-react';
+import { Map, Gauge } from 'lucide-react';
 
 export default function MapPage() {
     const [selectedDeviceId, setSelectedDeviceId] = useState(null);
@@ -18,7 +18,7 @@ export default function MapPage() {
                 <div className="px-4 py-4">
                     <div className="space-y-1">
                         <h1 className="text-3xl font-bold flex items-center gap-2">
-                            <MapPin className="w-8 h-8 text-primary" />
+                            <Map className="w-8 h-8 text-primary" />
                             Bản Đồ Cảm Biến Giám Sát
                         </h1>
                         <p className="text-sm text-muted-foreground">

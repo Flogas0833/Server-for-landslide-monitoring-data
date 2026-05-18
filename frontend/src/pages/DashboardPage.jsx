@@ -5,7 +5,7 @@ import { SensorTable } from '../components/SensorTable';
 import QueryStatus from '../components/QueryStatus';
 import { Card, CardHeader, CardTitle, CardContent, Input, Button, Separator } from '../components/ui';
 import { useStatistics } from '../hooks/useSensors';
-import { BarChart3, Filter, Download } from 'lucide-react';
+import { LayoutGrid, Filter, Download } from 'lucide-react';
 
 export default function DashboardPage() {
     const [selectedSensor, setSelectedSensor] = useState('tilt');
@@ -55,7 +55,7 @@ export default function DashboardPage() {
                 <div className="px-4 py-4">
                     <div className="space-y-1">
                         <h1 className="text-3xl font-bold flex items-center gap-2">
-                            <BarChart3 className="w-8 h-8 text-primary" />
+                            <LayoutGrid className="w-8 h-8 text-primary" />
                             Bảng Điều Khiển Giám Sát
                         </h1>
                         <p className="text-sm text-muted-foreground">

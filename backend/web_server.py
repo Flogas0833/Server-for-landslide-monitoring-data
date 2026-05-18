@@ -854,13 +854,26 @@ def get_alerts_history():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/alerts/<int:alert_id>/acknowledge', methods=['POST'])
+@require_permission('acknowledge:alerts')
 def acknowledge_alert(alert_id):
     """Acknowledge an alert"""
     try:
-        user = request.json.get('user', 'system') if request.json else 'system'
-        success = alert_manager.acknowledge_alert(alert_id, acknowledged_by=user)
+        # Get current user from JWT token via decorator
+        username = g.username or 'system'
+        user_id = g.user_id
+        
+        success = alert_manager.acknowledge_alert(alert_id, acknowledged_by=username)
         
         if success:
+            # Log audit trail
+            db.add_audit_log(
+                user_id=user_id,
+                username=username,
+                action='alert_acknowledge',
+                resource_type='alert',
+                resource_id=str(alert_id),
+                ip_address=request.remote_addr
+            )
             return jsonify({'message': 'Alert acknowledged', 'alert_id': alert_id})
         else:
             return jsonify({'error': 'Failed to acknowledge alert'}), 400

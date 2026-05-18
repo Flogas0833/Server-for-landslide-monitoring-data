@@ -171,7 +171,8 @@ class RBACManager:
             'export:data',
             'view:audit_logs',
             'view:alerts',
-            'manage:alerts'
+            'manage:alerts',
+            'acknowledge:alerts'
         ],
         'operator': [
             'view:sensor_data',

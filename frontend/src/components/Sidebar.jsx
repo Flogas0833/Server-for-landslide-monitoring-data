@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRoleCheck } from '../hooks/useRoleCheck';
-import { Menu, X, LogOut, BarChart3, Users, FileText, AlertCircle, Settings, LogIn } from 'lucide-react';
+import { Menu, X, LogOut, BarChart3, Users, FileText, AlertCircle, Settings, LogIn, Map, LayoutGrid } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from './ui/card';
 import { Badge } from './ui/badge';
@@ -25,13 +25,13 @@ export const Sidebar = () => {
             {
                 label: 'Bản Đồ',
                 path: '/',
-                icon: '🗺️',
+                icon: <Map size={20} />,
                 show: true,
             },
             {
                 label: 'Bảng Điều Khiển',
                 path: '/dashboard',
-                icon: '📊',
+                icon: <LayoutGrid size={20} />,
                 show: true,
             },
         ];

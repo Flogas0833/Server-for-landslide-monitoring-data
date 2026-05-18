@@ -7,6 +7,32 @@ import { Card, CardContent, Button, Input } from '../components/ui';
 import { translateAction, translateResourceType } from '../utils/helpers';
 import '../styles/adminPages.css';
 
+// Helper function to get action badge color class
+const getActionBadgeClass = (action) => {
+    // Alert-related actions
+    if (action === 'alert_acknowledge') {
+        return 'action-badge action-alert';
+    }
+    // User management actions
+    if (['create_user', 'user_created', 'user_updated', 'user_deleted'].includes(action)) {
+        return 'action-badge action-user';
+    }
+    // Device actions
+    if (['device_created', 'device_updated', 'device_deleted'].includes(action)) {
+        return 'action-badge action-device';
+    }
+    // Settings/threshold actions
+    if (['update_threshold', 'update_threshold_by_province', 'reset_threshold', 'settings_changed'].includes(action)) {
+        return 'action-badge action-setting';
+    }
+    // Login/logout
+    if (['login_success', 'login_failed', 'logout'].includes(action)) {
+        return 'action-badge action-auth';
+    }
+    // Default
+    return 'action-badge';
+};
+
 export const AdminAuditLogsPage = () => {
     const { isAdmin } = useRoleCheck();
     const permissions = usePermissions();
@@ -287,7 +313,7 @@ export const AdminAuditLogsPage = () => {
                                             <tr key={log.id}>
                                                 <td>{log.username}</td>
                                                 <td>
-                                                    <span className="action-badge">
+                                                    <span className={getActionBadgeClass(log.action)}>
                                                         {translateAction(log.action)}
                                                     </span>
                                                 </td>

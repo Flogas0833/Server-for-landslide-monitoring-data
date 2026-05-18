@@ -3,13 +3,29 @@ import { useRoleCheck } from '../hooks/useRoleCheck';
 import { usePermissions } from '../hooks/useRoleCheck';
 import { useAlertStats } from '../hooks/useAlerts';
 import axios from 'axios';
-import { BarChart3, Shield, AlertTriangle, TrendingUp, Activity } from 'lucide-react';
+import { BarChart3, Shield, AlertTriangle, TrendingUp, Activity, Satellite, CheckCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Separator } from '../components/ui';
 import {
     BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import '../styles/adminPages.css';
+
+const StatCard = ({ icon: Icon, label, value, isLoading }) => (
+    <Card className="p-4">
+        <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+                <Icon className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1">
+                <p className="text-sm text-muted-foreground">{label}</p>
+                <p className="text-2xl font-semibold">
+                    {isLoading ? '--' : value}
+                </p>
+            </div>
+        </div>
+    </Card>
+);
 
 export const StatisticsPage = () => {
     const { isAdmin, isOperator } = useRoleCheck();
@@ -118,64 +134,34 @@ export const StatisticsPage = () => {
             ) : stats ? (
                 <div className="px-4 space-y-6">
                     {/* Key Metrics Cards */}
-                    <div className="stats-grid">
-                        {/* Total Devices */}
-                        <Card className="stat-card metric-card">
-                            <CardContent className="pt-6">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Tổng Thiết Bị</p>
-                                        <p className="text-3xl font-bold mt-2">{stats.total_devices}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Toàn bộ hệ thống</p>
-                                    </div>
-                                    <div className="text-3xl">📱</div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <StatCard
+                            icon={Satellite}
+                            label="Tổng Thiết Bị"
+                            value={stats.total_devices}
+                            isLoading={loading}
+                        />
 
-                        {/* Active Devices */}
-                        <Card className="stat-card metric-card">
-                            <CardContent className="pt-6">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Thiết Bị Hoạt Động</p>
-                                        <p className="text-3xl font-bold mt-2">{stats.active_devices}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {((stats.active_devices / stats.total_devices) * 100).toFixed(0)}% hoạt động
-                                        </p>
-                                    </div>
-                                    <div className="text-3xl">✅</div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            icon={CheckCircle}
+                            label="Thiết Bị Hoạt Động"
+                            value={stats.active_devices}
+                            isLoading={loading}
+                        />
 
-                        {/* Alert Count */}
-                        <Card className="stat-card metric-card alert-metric">
-                            <CardContent className="pt-6">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Tổng Cảnh Báo</p>
-                                        <p className="text-3xl font-bold mt-2">{totalAlerts}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">{criticalAlerts} nguy hiểm, {warningAlerts} cao</p>
-                                    </div>
-                                    <div className="text-3xl">🚨</div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            icon={AlertTriangle}
+                            label="Tổng Cảnh Báo"
+                            value={totalAlerts}
+                            isLoading={loading}
+                        />
 
-                        {/* Sensor Types */}
-                        <Card className="stat-card metric-card">
-                            <CardContent className="pt-6">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Loại Cảm Biến</p>
-                                        <p className="text-3xl font-bold mt-2">{stats.sensor_types?.length || 0}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">Các loại khác nhau</p>
-                                    </div>
-                                    <div className="text-3xl">📊</div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            icon={Activity}
+                            label="Loại Cảm Biến"
+                            value={stats.sensor_types?.length || 0}
+                            isLoading={loading}
+                        />
                     </div>
 
                     {/* Alert Statistics Section */}
