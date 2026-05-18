@@ -6,10 +6,39 @@ import axios from 'axios';
 import { BarChart3, Shield, AlertTriangle, TrendingUp, Activity, Satellite, CheckCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Separator } from '../components/ui';
 import {
-    BarChart, Bar, PieChart, Pie, Cell,
+    BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import '../styles/adminPages.css';
+
+// Custom Legend Component for sorted order
+const CustomLegend = (props) => {
+    const legendOrder = [
+        { dataKey: 'total', name: 'Tổng Cảnh Báo', color: '#ef4444' },
+        { dataKey: 'critical', name: 'Nguy Hiểm', color: '#dc2626' },
+        { dataKey: 'warning', name: 'Cao', color: '#f97316' },
+        { dataKey: 'medium', name: 'Trung Bình', color: '#fbbf24' },
+        { dataKey: 'low', name: 'Thấp', color: '#3b82f6' }
+    ];
+
+    return (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', marginTop: '16px' }}>
+            {legendOrder.map((item) => (
+                <div key={item.dataKey} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div
+                        style={{
+                            width: '12px',
+                            height: '12px',
+                            backgroundColor: item.color,
+                            borderRadius: '2px'
+                        }}
+                    />
+                    <span style={{ fontSize: '14px', color: '#666' }}>{item.name}</span>
+                </div>
+            ))}
+        </div>
+    );
+};
 
 const StatCard = ({ icon: Icon, label, value, isLoading }) => (
     <Card className="p-4">
@@ -34,6 +63,7 @@ export const StatisticsPage = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [alertLevelData, setAlertLevelData] = useState([]);
+    const [dailyAlertData, setDailyAlertData] = useState([]);
 
     const SENSOR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
     const ALERT_COLORS = {
@@ -55,6 +85,22 @@ export const StatisticsPage = () => {
                 setStats(statsResponse.data);
                 // Save to localStorage for fallback use
                 localStorage.setItem('last_statistics', JSON.stringify(statsResponse.data));
+
+                // Fetch daily alert data
+                try {
+                    const dailyAlertsResponse = await axios.get('/api/alerts/daily', {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    const dailyData = dailyAlertsResponse.data.daily_alerts || [];
+                    setDailyAlertData(dailyData);
+                    localStorage.setItem('daily_alert_data', JSON.stringify(dailyData));
+                } catch (err) {
+                    console.warn('Error fetching daily alerts:', err);
+                    const savedDailyData = localStorage.getItem('daily_alert_data');
+                    if (savedDailyData) {
+                        setDailyAlertData(JSON.parse(savedDailyData));
+                    }
+                }
 
                 // Fetch dashboard statistics (device activity and sensor distribution)
             } catch (error) {
@@ -109,10 +155,10 @@ export const StatisticsPage = () => {
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
-            <header className="border-b bg-card py-4 mb-4">
-                <div className="px-4 py-4">
-                    <div className="space-y-1">
-                        <h1 className="text-3xl font-bold flex items-center gap-2">
+            <header className="border-b bg-card py-1 mb-2">
+                <div className="px-4 py-1">
+                    <div className="space-y-0">
+                        <h1 className="text-xl font-bold flex items-center gap-2">
                             <BarChart3 className="w-8 h-8 text-primary" />
                             Thống Kê Hệ Thống
                         </h1>
@@ -163,6 +209,83 @@ export const StatisticsPage = () => {
                             isLoading={loading}
                         />
                     </div>
+
+                    {/* Daily Alerts Trend Chart */}
+                    {dailyAlertData.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <TrendingUp size={24} />
+                                    Xu Hướng Cảnh Báo Theo Ngày
+                                </CardTitle>
+                                <p className="text-sm text-muted-foreground mt-2">Biểu đồ thể hiện số lượng cảnh báo trong 30 ngày gần đây</p>
+                            </CardHeader>
+                            <CardContent>
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <LineChart data={dailyAlertData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                            dataKey="date"
+                                            angle={-45}
+                                            textAnchor="end"
+                                            height={80}
+                                        />
+                                        <YAxis />
+                                        <Tooltip
+                                            formatter={(value) => [value, 'Số cảnh báo']}
+                                            labelFormatter={(label) => `Ngày: ${label}`}
+                                        />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="total"
+                                            stroke="#ef4444"
+                                            strokeWidth={2}
+                                            dot={{ fill: '#ef4444', r: 4 }}
+                                            activeDot={{ r: 6 }}
+                                            name="Tổng Cảnh Báo"
+                                        />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="critical"
+                                            stroke="#dc2626"
+                                            strokeWidth={2}
+                                            dot={{ fill: '#dc2626', r: 4 }}
+                                            activeDot={{ r: 6 }}
+                                            name="Nguy Hiểm"
+                                        />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="warning"
+                                            stroke="#f97316"
+                                            strokeWidth={2}
+                                            dot={{ fill: '#f97316', r: 4 }}
+                                            activeDot={{ r: 6 }}
+                                            name="Cao"
+                                        />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="medium"
+                                            stroke="#fbbf24"
+                                            strokeWidth={2}
+                                            dot={{ fill: '#fbbf24', r: 4 }}
+                                            activeDot={{ r: 6 }}
+                                            name="Trung Bình"
+                                        />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="low"
+                                            stroke="#3b82f6"
+                                            strokeWidth={2}
+                                            dot={{ fill: '#3b82f6', r: 4 }}
+                                            activeDot={{ r: 6 }}
+                                            name="Thấp"
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                                <CustomLegend />
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Alert Statistics Section */}
                     <Card className="alert-stats-card">
@@ -255,17 +378,6 @@ export const StatisticsPage = () => {
                             </CardContent>
                         </Card>
                     )}
-
-                    {/* Last Update Info */}
-                    <Separator />
-                    <div className="text-center text-sm text-muted-foreground py-4">
-                        <p>
-                            <span className="font-semibold">Cập nhật cuối cùng:</span> {' '}
-                            {stats.last_device_update
-                                ? new Date(stats.last_device_update).toLocaleString('vi-VN')
-                                : 'Chưa cập nhật'}
-                        </p>
-                    </div>
                 </div>
             ) : (
                 <div className="px-4">

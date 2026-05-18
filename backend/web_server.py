@@ -893,6 +893,21 @@ def get_alert_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/alerts/daily', methods=['GET'])
+@require_auth()
+def get_daily_alerts():
+    """Get alert counts grouped by day for the past N days"""
+    try:
+        days = request.args.get('days', 30, type=int)
+        daily_alerts = alert_manager.get_daily_alerts(days=days)
+        
+        return jsonify({
+            'daily_alerts': daily_alerts,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/alerts/thresholds', methods=['GET'])
 def get_thresholds():
     """Get alert thresholds (Public endpoint)"""
@@ -1480,6 +1495,7 @@ if __name__ == '__main__':
     print("     Parameters: device_id, limit")
     print("   - POST /api/alerts/<id>/acknowledge - Acknowledge an alert")
     print("   - GET /api/alerts/stats - Get alert statistics")
+    print("   - GET /api/alerts/daily - Get daily alert trends (requires auth)")
     print("   - GET /api/alerts/thresholds - Get alert thresholds")
     print("   - POST /api/alerts/thresholds - Update alert threshold")
     print("\n📝 Device Management:")

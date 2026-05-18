@@ -14,10 +14,10 @@ export default function MapPage() {
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
-            <header className="border-b bg-card py-4 mb-4">
-                <div className="px-4 py-4">
-                    <div className="space-y-1">
-                        <h1 className="text-3xl font-bold flex items-center gap-2">
+            <header className="border-b bg-card py-1 mb-2">
+                <div className="px-4 py-1">
+                    <div className="space-y-0">
+                        <h1 className="text-xl font-bold flex items-center gap-2">
                             <Map className="w-8 h-8 text-primary" />
                             Bản Đồ Cảm Biến Giám Sát
                         </h1>

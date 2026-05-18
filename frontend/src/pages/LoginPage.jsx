@@ -54,10 +54,10 @@ export default function LoginPage() {
             <div className="min-h-screen bg-background">
                 {/* Header */}
                 <header className="border-b bg-card sticky top-0 z-40">
-                    <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="max-w-7xl mx-auto px-4 py-1">
                         <div className="flex items-center gap-3">
                             <Mountain className="w-8 h-8 text-primary" />
-                            <h1 className="text-2xl font-bold">Hệ Thống Giám Sát Lở Đất</h1>
+                            <h1 className="text-xl font-bold">Hệ Thống Giám Sát Lở Đất</h1>
                         </div>
                     </div>
                 </header>
@@ -79,10 +79,10 @@ export default function LoginPage() {
         <div className="min-h-screen bg-background">
             {/* Header */}
             <header className="border-b bg-card sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-4 py-4">
+                <div className="max-w-7xl mx-auto px-4 py-1">
                     <div className="flex items-center gap-3">
                         <Mountain className="w-8 h-8 text-primary" />
-                        <h1 className="text-2xl font-bold">Hệ Thống Giám Sát Lở Đất</h1>
+                        <h1 className="text-xl font-bold">Hệ Thống Giám Sát Lở Đất</h1>
                     </div>
                 </div>
             </header>

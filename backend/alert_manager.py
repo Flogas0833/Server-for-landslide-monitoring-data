@@ -530,8 +530,21 @@ class AlertManager:
         return result
     
     def get_all_thresholds_from_db(self) -> Dict:
-        """Get all thresholds directly from database (with metadata)"""
+        """Get all thresholds from database merged with defaults (with metadata)"""
         try:
+            from datetime import datetime
+            
+            # Start with all defaults
+            result = {}
+            for sensor, thresholds in self.thresholds.items():
+                result[sensor] = {}
+                for threshold_name, value in thresholds.items():
+                    result[sensor][threshold_name] = {
+                        'value': value,
+                        'updated_at': datetime.now().isoformat()
+                    }
+            
+            # Override with custom thresholds from database if they exist
             conn = self.get_connection()
             cursor = conn.cursor()
             
@@ -542,7 +555,6 @@ class AlertManager:
             ''')
             rows = cursor.fetchall()
             
-            result = {}
             for row in rows:
                 sensor_type = row['sensor_type']
                 threshold_name = row['threshold_name']
@@ -559,7 +571,17 @@ class AlertManager:
             return result
         except Exception as e:
             print(f"Error getting thresholds from database: {str(e)}")
-            return {}
+            # Return defaults on error
+            result = {}
+            from datetime import datetime
+            for sensor, thresholds in self.thresholds.items():
+                result[sensor] = {}
+                for threshold_name, value in thresholds.items():
+                    result[sensor][threshold_name] = {
+                        'value': value,
+                        'updated_at': datetime.now().isoformat()
+                    }
+            return result
     
     def reset_thresholds(self) -> bool:
         """Reset all thresholds to default values"""
@@ -631,6 +653,46 @@ class AlertManager:
             print(f"Error getting alert stats: {str(e)}")
             return {}
     
+    def get_daily_alerts(self, days: int = 30) -> List[Dict]:
+        """Get alert counts grouped by day for the past N days"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Get alerts for the past N days grouped by date
+            cursor.execute('''
+                SELECT 
+                    DATE(timestamp) as date,
+                    COUNT(*) as total,
+                    SUM(CASE WHEN danger_level = 'critical' THEN 1 ELSE 0 END) as critical,
+                    SUM(CASE WHEN danger_level = 'high' THEN 1 ELSE 0 END) as warning,
+                    SUM(CASE WHEN danger_level = 'medium' THEN 1 ELSE 0 END) as medium,
+                    SUM(CASE WHEN danger_level = 'low' THEN 1 ELSE 0 END) as low
+                FROM alerts
+                WHERE DATE(timestamp) >= DATE('now', '-' || ? || ' days')
+                GROUP BY DATE(timestamp)
+                ORDER BY date ASC
+            ''', (days,))
+            
+            rows = cursor.fetchall()
+            daily_data = []
+            
+            for row in rows:
+                daily_data.append({
+                    'date': row['date'],
+                    'total': row['total'],
+                    'critical': row['critical'] or 0,
+                    'warning': row['warning'] or 0,
+                    'medium': row['medium'] or 0,
+                    'low': row['low'] or 0,
+                })
+            
+            conn.close()
+            return daily_data
+        except Exception as e:
+            print(f"Error getting daily alerts: {str(e)}")
+            return []
+    
     # ============ PROVINCE-SPECIFIC THRESHOLDS ============
     
     def update_threshold_by_province(self, province: str, sensor_type: str, 
@@ -652,7 +714,7 @@ class AlertManager:
     def get_thresholds_for_province(self, province: str, sensor_type: Optional[str] = None) -> Dict:
         """
         Get thresholds for a specific province.
-        If province has custom thresholds, return those with metadata. Otherwise return defaults.
+        Merges province-specific custom thresholds with defaults.
         Returns format: {sensor_type: {threshold_name: {value: X, updated_at: Y}}}
         """
         try:
@@ -663,33 +725,28 @@ class AlertManager:
             from datetime import datetime
             
             db = SensorDatabase()
-            province_thresholds = db.get_thresholds_by_province(province, sensor_type)
+            province_thresholds = db.get_thresholds_by_province(province)
             
-            # If province has custom thresholds, format them with metadata
-            if province_thresholds:
-                result = {}
-                for sensor, thresholds in province_thresholds.items():
-                    result[sensor] = {}
-                    for threshold_name, value in thresholds.items():
-                        result[sensor][threshold_name] = {
-                            'value': value,
-                            'updated_at': datetime.now().isoformat()
-                        }
-                
-                if sensor_type:
-                    return result.get(sensor_type, {})
-                return result
-            
-            # Otherwise return default thresholds with metadata
+            # Start with all defaults
             result = {}
-            thresholds_to_use = self.thresholds
-            for sensor, thresholds in thresholds_to_use.items():
+            for sensor, thresholds in self.thresholds.items():
                 result[sensor] = {}
                 for threshold_name, value in thresholds.items():
                     result[sensor][threshold_name] = {
                         'value': value,
                         'updated_at': datetime.now().isoformat()
                     }
+            
+            # Override with province-specific custom thresholds if they exist
+            if province_thresholds:
+                for sensor, thresholds in province_thresholds.items():
+                    if sensor not in result:
+                        result[sensor] = {}
+                    for threshold_name, value in thresholds.items():
+                        result[sensor][threshold_name] = {
+                            'value': value,
+                            'updated_at': datetime.now().isoformat()
+                        }
             
             if sensor_type:
                 return result.get(sensor_type, {})
