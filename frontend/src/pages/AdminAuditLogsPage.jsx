@@ -4,7 +4,7 @@ import { usePermissions } from '../hooks/useRoleCheck';
 import { auditAPI } from '../utils/api';
 import { FileText, Shield, AlertCircle, Filter } from 'lucide-react';
 import { Card, CardContent, Button, Input } from '../components/ui';
-import { translateAction, translateResourceType } from '../utils/helpers';
+import { translateAction, translateResourceType, formatTime } from '../utils/helpers';
 import '../styles/adminPages.css';
 
 // Helper function to get action badge color class
@@ -318,7 +318,7 @@ export const AdminAuditLogsPage = () => {
                                                     </span>
                                                 </td>
                                                 <td>{translateResourceType(log.resource_type)}</td>
-                                                <td>{new Date(log.timestamp).toLocaleString('vi-VN')}</td>
+                                                <td>{formatTime(log.timestamp)}</td>
                                                 <td className="mono">{log.ip_address}</td>
                                             </tr>
                                         ))}

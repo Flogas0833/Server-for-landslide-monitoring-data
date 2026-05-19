@@ -6,11 +6,12 @@ import QueryStatus from '../components/QueryStatus';
 import { Card, CardHeader, CardTitle, CardContent, Input, Button, Separator } from '../components/ui';
 import { useStatistics } from '../hooks/useSensors';
 import { LayoutGrid, Filter, Download } from 'lucide-react';
+import { calculateUTCDateRange, getTodayGMT7 } from '../utils/helpers';
 
 export default function DashboardPage() {
     const [selectedSensor, setSelectedSensor] = useState('tilt');
     const [deviceFilter, setDeviceFilter] = useState('');
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(getTodayGMT7());
     const statsQuery = useStatistics();
 
     const sensorTypes = [
@@ -22,13 +23,7 @@ export default function DashboardPage() {
     ];
 
     const calculateDateRange = () => {
-        const date = new Date(selectedDate);
-        const startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
-        const endDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
-        return {
-            start_date: startDate.toISOString(),
-            end_date: endDate.toISOString(),
-        };
+        return calculateUTCDateRange(selectedDate);
     };
 
     const dateRange = calculateDateRange();

@@ -14,7 +14,8 @@ from flask_cors import CORS
 from database import SensorDatabase
 from alert_manager import AlertManager, DangerLevel
 from jwt_auth_manager import JWTAuthManager, RBACManager, require_auth, require_role, require_permission
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from timezone_utils import utc_to_gmt7, now_utc_iso, now_gmt7_iso
 import csv
 import io
 import json
@@ -94,6 +95,22 @@ db = SensorDatabase()
 
 # Initialize alert manager
 alert_manager = AlertManager()
+
+# ============ UTILITY FUNCTIONS ============
+
+def convert_timestamps_in_response(obj, timestamp_fields=['timestamp', 'created_at', 'updated_at', 'last_login', 'last_update', 'last_alert_time', 'acknowledged_at']):
+    """Convert UTC timestamps to GMT+7 in API responses"""
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if key in timestamp_fields and value:
+                obj[key] = utc_to_gmt7(value)
+            elif isinstance(value, dict):
+                convert_timestamps_in_response(value, timestamp_fields)
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        convert_timestamps_in_response(item, timestamp_fields)
+    return obj
 
 # ============ AUTHENTICATION ENDPOINTS ============
 
@@ -462,6 +479,9 @@ def get_sensor_data(sensor_type):
             offset=offset
         )
         
+        # Convert timestamps to GMT+7
+        convert_timestamps_in_response(result)
+        
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -484,6 +504,9 @@ def get_statistics():
                                    if devices_with_location else None
         }
         
+        # Convert timestamps to GMT+7
+        convert_timestamps_in_response(stats, timestamp_fields=['first_device_update', 'last_device_update'])
+        
         return jsonify(stats)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -493,28 +516,36 @@ def get_statistics():
 def get_dashboard_statistics():
     """Get dashboard statistics including device activity (7 days) and sensor distribution (requires authentication)"""
     try:
-        # Calculate date range for 7 days
-        end_date = datetime.now()
+        # Calculate date range for 7 days in GMT+7
+        end_date_gmt7 = now_gmt7_iso()
+        end_date = datetime.fromisoformat(end_date_gmt7)
         start_date = end_date - timedelta(days=7)
+        
+        # Convert back to UTC for querying database (add 7 hours to go back to UTC)
+        start_date_utc = start_date.replace(tzinfo=timezone.utc) - timedelta(hours=7)
+        end_date_utc = end_date.replace(tzinfo=timezone.utc) - timedelta(hours=7)
         
         # Get readings for the past 7 days
         readings_result = db.get_readings_with_filters(
-            start_date=start_date.isoformat(),
-            end_date=end_date.isoformat(),
+            start_date=start_date_utc.isoformat(),
+            end_date=end_date_utc.isoformat(),
             limit=10000,  # Get large number for aggregation
             offset=0
         )
         
         readings = readings_result.get('data', [])
         
-        # Process device activity data (group by day and device)
+        # Process device activity data (group by day and device) using GMT+7
         device_activity_by_day = {}
         sensor_count_by_type = {}
         
         for reading in readings:
-            # Device activity
-            timestamp = datetime.fromisoformat(reading.get('timestamp', ''))
-            day_key = timestamp.strftime('%Y-%m-%d')
+            # Device activity - convert timestamp to GMT+7 for grouping
+            timestamp_str = reading.get('timestamp', '')
+            timestamp_utc = datetime.fromisoformat(timestamp_str)
+            # Convert UTC to GMT+7 by adding 7 hours
+            timestamp_gmt7 = timestamp_utc + timedelta(hours=7)
+            day_key = timestamp_gmt7.strftime('%Y-%m-%d')
             device_id = reading.get('device_id')
             
             if day_key not in device_activity_by_day:
@@ -529,7 +560,7 @@ def get_dashboard_statistics():
         all_devices = db.get_all_devices()
         total_devices = len(all_devices)
         
-        # Format device activity for chart (last 7 days)
+        # Format device activity for chart (last 7 days) in GMT+7
         device_activity_chart = []
         for i in range(7):
             day = start_date + timedelta(days=i)
@@ -539,7 +570,7 @@ def get_dashboard_statistics():
             
             # Count readings (as proxy for alerts) for this day
             alerts_count = sum(1 for r in readings 
-                             if datetime.fromisoformat(r.get('timestamp', '')).strftime('%Y-%m-%d') == day_key)
+                             if (datetime.fromisoformat(r.get('timestamp', '')) + timedelta(hours=7)).strftime('%Y-%m-%d') == day_key)
             
             device_activity_chart.append({
                 'name': day_name,
@@ -711,7 +742,7 @@ def export_sensor_json():
         )
         
         export_data = {
-            'export_timestamp': datetime.now().isoformat(),
+            'export_timestamp': now_gmt7_iso(),
             'filters': {
                 'sensor_type': sensor_type,
                 'device_id': device_id,
@@ -721,6 +752,9 @@ def export_sensor_json():
             'total_records': len(readings),
             'data': readings
         }
+        
+        # Convert timestamps to GMT+7
+        convert_timestamps_in_response(export_data)
         
         json_content = json.dumps(export_data, indent=2)
         
@@ -828,10 +862,17 @@ def get_alerts():
         
         alerts = alert_manager.get_active_alerts(danger_level=danger_level, limit=limit, acknowledged=acknowledged)
         
+        # Convert alert timestamps to GMT+7
+        for alert in alerts:
+            if alert.get('timestamp'):
+                alert['timestamp'] = utc_to_gmt7(alert['timestamp'])
+            if alert.get('acknowledged_at'):
+                alert['acknowledged_at'] = utc_to_gmt7(alert['acknowledged_at'])
+        
         return jsonify({
             'alerts': alerts,
             'total': len(alerts),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': now_gmt7_iso()
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -845,10 +886,17 @@ def get_alerts_history():
         
         alerts = alert_manager.get_alert_history(device_id=device_id, limit=limit)
         
+        # Convert alert timestamps to GMT+7
+        for alert in alerts:
+            if alert.get('timestamp'):
+                alert['timestamp'] = utc_to_gmt7(alert['timestamp'])
+            if alert.get('acknowledged_at'):
+                alert['acknowledged_at'] = utc_to_gmt7(alert['acknowledged_at'])
+        
         return jsonify({
             'alerts': alerts,
             'total': len(alerts),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': now_gmt7_iso()
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -888,7 +936,7 @@ def get_alert_stats():
         
         return jsonify({
             'stats': stats,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': now_gmt7_iso()
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -903,7 +951,7 @@ def get_daily_alerts():
         
         return jsonify({
             'daily_alerts': daily_alerts,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': now_gmt7_iso()
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1098,10 +1146,16 @@ def get_all_users():
                 'createdAt': user.get('created_at'),
                 'site_ids': user.get('site_ids', [])
             })
-        return jsonify({
+        
+        response_data = {
             'users': user_list,
             'total': len(user_list)
-        }), 200
+        }
+        
+        # Convert timestamps to GMT+7
+        convert_timestamps_in_response(response_data)
+        
+        return jsonify(response_data), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1307,6 +1361,11 @@ def get_audit_logs():
             start_date=start_date,
             end_date=end_date
         )
+        
+        # Convert timestamps to GMT+7
+        for log in result.get('data', []):
+            if log.get('timestamp'):
+                log['timestamp'] = utc_to_gmt7(log['timestamp'])
         
         return jsonify({
             'logs': result.get('data', []),

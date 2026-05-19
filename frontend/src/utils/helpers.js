@@ -1,19 +1,34 @@
 /**
  * Format timestamp to readable format (GMT+7)
+ * Assumes timestamps from backend are in UTC ISO format
  */
 export const formatTime = (timestamp) => {
     if (!timestamp) return '-';
-    const date = new Date(timestamp);
-    // Add 7 hours for GMT+7 timezone
-    date.setHours(date.getHours() + 7);
-    return date.toLocaleString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-    });
+
+    try {
+        // Parse the timestamp
+        const date = new Date(timestamp);
+
+        // Check if date is valid
+        if (isNaN(date.getTime())) return '-';
+
+        // Format in GMT+7 using Intl API
+        // The browser will handle timezone conversion properly
+        const formatter = new Intl.DateTimeFormat('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZone: 'Asia/Bangkok' // GMT+7
+        });
+
+        return formatter.format(date);
+    } catch (e) {
+        console.error('Error formatting time:', e, timestamp);
+        return '-';
+    }
 };
 
 /**
@@ -128,6 +143,49 @@ export const translateAction = (action) => {
         'reset_threshold': 'Đặt lại ngưỡng cảnh báo',
     };
     return actionMap[action] || action.replace(/_/g, ' ');
+};
+
+/**
+ * Get today's date string in GMT+7 timezone
+ * Returns date in YYYY-MM-DD format
+ * 
+ * @returns {string} Today's date in YYYY-MM-DD format (GMT+7)
+ */
+export const getTodayGMT7 = () => {
+    const formatter = new Intl.DateTimeFormat('sv-SE', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: 'Asia/Bangkok' // GMT+7
+    });
+    return formatter.format(new Date());
+};
+
+/**
+ * Calculate UTC date range for a given GMT+7 date
+ * Converts GMT+7 midnight-to-midnight range to UTC equivalents
+ * 
+ * @param {string} dateStr - Date string in YYYY-MM-DD format (interpreted as GMT+7)
+ * @returns {Object} Object with start_date and end_date in UTC ISO format
+ */
+export const calculateUTCDateRange = (dateStr) => {
+    // Parse the date string (YYYY-MM-DD)
+    const [year, month, day] = dateStr.split('-').map(Number);
+
+    // Create UTC midnight for the selected date: 2026-05-19T00:00:00Z
+    const utcMidnight = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+
+    // Start of day in GMT+7 = UTC midnight - 7 hours
+    // So we need to subtract 7 hours from UTC midnight
+    const startUTC = new Date(utcMidnight.getTime() - 7 * 60 * 60 * 1000);
+
+    // End of day in GMT+7 = next day UTC midnight - 7 hours - 1ms
+    const endUTC = new Date(startUTC.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    return {
+        start_date: startUTC.toISOString(),
+        end_date: endUTC.toISOString(),
+    };
 };
 
 /**

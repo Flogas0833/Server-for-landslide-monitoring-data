@@ -3,11 +3,19 @@ Alert Manager - Handle sensor alerts and notifications
 Monitors sensors for danger thresholds and generates alerts
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import json
 import sqlite3
+try:
+    from timezone_utils import utc_to_gmt7, now_utc_iso, now_gmt7_iso
+except ImportError:
+    # Fallback if timezone_utils not yet imported
+    def now_utc_iso():
+        return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+    def utc_to_gmt7(ts):
+        return ts
 
 
 class DangerLevel(Enum):
@@ -515,14 +523,14 @@ class AlertManager:
         """Get all thresholds or for a specific sensor type
         Returns format: {sensor_type: {threshold_name: {value: X, updated_at: Y}}}
         """
-        from datetime import datetime
         result = {}
+        current_time = now_utc_iso()
         for sensor, thresholds in self.thresholds.items():
             result[sensor] = {}
             for threshold_name, value in thresholds.items():
                 result[sensor][threshold_name] = {
                     'value': value,
-                    'updated_at': datetime.now().isoformat()
+                    'updated_at': current_time
                 }
         
         if sensor_type:
@@ -532,16 +540,15 @@ class AlertManager:
     def get_all_thresholds_from_db(self) -> Dict:
         """Get all thresholds from database merged with defaults (with metadata)"""
         try:
-            from datetime import datetime
-            
             # Start with all defaults
             result = {}
+            current_time = now_utc_iso()
             for sensor, thresholds in self.thresholds.items():
                 result[sensor] = {}
                 for threshold_name, value in thresholds.items():
                     result[sensor][threshold_name] = {
                         'value': value,
-                        'updated_at': datetime.now().isoformat()
+                        'updated_at': current_time
                     }
             
             # Override with custom thresholds from database if they exist
@@ -643,7 +650,7 @@ class AlertManager:
             
             cursor.execute('''
                 SELECT COUNT(*) as count FROM alerts 
-                WHERE DATE(timestamp) = DATE('now')
+                WHERE DATE(datetime(timestamp, '+7 hours')) = DATE(datetime('now', '+7 hours'))
             ''')
             stats['total_alerts_today'] = cursor.fetchone()['count']
             
@@ -654,23 +661,24 @@ class AlertManager:
             return {}
     
     def get_daily_alerts(self, days: int = 30) -> List[Dict]:
-        """Get alert counts grouped by day for the past N days"""
+        """Get alert counts grouped by day for the past N days (in GMT+7)"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Get alerts for the past N days grouped by date
+            # Get alerts for the past N days grouped by date (GMT+7 timezone)
+            # Convert timestamp to GMT+7 by adding 7 hours, then extract date
             cursor.execute('''
                 SELECT 
-                    DATE(timestamp) as date,
+                    DATE(datetime(timestamp, '+7 hours')) as date,
                     COUNT(*) as total,
                     SUM(CASE WHEN danger_level = 'critical' THEN 1 ELSE 0 END) as critical,
                     SUM(CASE WHEN danger_level = 'high' THEN 1 ELSE 0 END) as warning,
                     SUM(CASE WHEN danger_level = 'medium' THEN 1 ELSE 0 END) as medium,
                     SUM(CASE WHEN danger_level = 'low' THEN 1 ELSE 0 END) as low
                 FROM alerts
-                WHERE DATE(timestamp) >= DATE('now', '-' || ? || ' days')
-                GROUP BY DATE(timestamp)
+                WHERE DATE(datetime(timestamp, '+7 hours')) >= DATE(datetime('now', '+7 hours'), '-' || ? || ' days')
+                GROUP BY DATE(datetime(timestamp, '+7 hours'))
                 ORDER BY date ASC
             ''', (days,))
             

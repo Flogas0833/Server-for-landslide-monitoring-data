@@ -3,6 +3,7 @@ import axios from 'axios';
 import { AlertCircle, CheckCircle2, Clock, XCircle, Filter, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button, Input, Separator, Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../components/ui';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '../components/ui';
+import { formatTime } from '../utils/helpers';
 import '../styles/adminPages.css';
 
 export default function AlertsPage() {
@@ -381,18 +382,7 @@ export default function AlertsPage() {
                                                     {typeof alert.threshold === 'number' ? alert.threshold.toFixed(2) : alert.threshold}
                                                 </TableCell>
                                                 <TableCell className="text-sm whitespace-nowrap">
-                                                    {(() => {
-                                                        const date = new Date(alert.timestamp);
-                                                        date.setHours(date.getHours() + 7);
-                                                        return date.toLocaleString('vi-VN', {
-                                                            year: 'numeric',
-                                                            month: '2-digit',
-                                                            day: '2-digit',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit',
-                                                            second: '2-digit'
-                                                        });
-                                                    })()}
+                                                    {formatTime(alert.timestamp)}
                                                 </TableCell>
                                                 <TableCell>
                                                     {alert.acknowledged ? (

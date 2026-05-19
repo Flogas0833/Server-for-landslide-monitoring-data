@@ -358,26 +358,6 @@ export const StatisticsPage = () => {
                         </CardContent>
                     </Card>
 
-                    {/* Sensor Types List */}
-                    {stats?.sensor_types && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Activity size={24} />
-                                    Danh Sách Loại Cảm Biến
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-wrap gap-2">
-                                    {stats.sensor_types.map((type) => (
-                                        <Badge key={type} variant="outline">
-                                            📈 {type.toUpperCase()}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
                 </div>
             ) : (
                 <div className="px-4">
