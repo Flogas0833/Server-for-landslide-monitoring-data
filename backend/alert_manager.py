@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import json
 import sqlite3
+import os
 try:
     from timezone_utils import utc_to_gmt7, now_utc_iso, now_gmt7_iso
 except ImportError:
@@ -88,9 +89,15 @@ class AlertManager:
         },
     }
     
-    def __init__(self, db_path: str = "../database/sensors.db"):
+    def __init__(self, db_path: str = None):
         """Initialize alert manager"""
+        if db_path is None:
+            # Use absolute path from project root (same as SensorDatabase)
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            db_path = os.path.join(project_root, 'database', 'sensors.db')
+        
         self.db_path = db_path
+        os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
         self.thresholds = self.DEFAULT_THRESHOLDS.copy()
         self.init_alert_tables()
         self.load_thresholds_from_db()
