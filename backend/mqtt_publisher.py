@@ -14,7 +14,7 @@ import paho.mqtt.client as mqtt
 
 class SensorPublisher:
     def __init__(self, broker_host: str, broker_port: int, device_id: str, 
-                 project_id: str, site_id: str, username: str = None, password: str = None):
+                 username: str = None, password: str = None):
         """
         Initialize MQTT Publisher
         
@@ -22,16 +22,12 @@ class SensorPublisher:
             broker_host: MQTT broker address
             broker_port: MQTT broker port
             device_id: Unique device identifier
-            project_id: Project ID
-            site_id: Site ID
             username: MQTT username
             password: MQTT password
         """
         self.broker_host = broker_host
         self.broker_port = broker_port
         self.device_id = device_id
-        self.project_id = project_id
-        self.site_id = site_id
         self.username = username
         self.password = password
         
@@ -52,7 +48,7 @@ class SensorPublisher:
             print(f"✓ Connected to MQTT broker: {self.broker_host}:{self.broker_port}")
             print(f"  Device ID: {self.device_id}")
             # Subscribe to command topic
-            topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/command"
+            topic = f"sensors/{self.device_id}/command"
             self.client.subscribe(topic, qos=2)
         else:
             print(f"✗ Connection failed with code {rc}")
@@ -93,7 +89,7 @@ class SensorPublisher:
     
     def publish_tilt(self, roll: float, pitch: float, quality: int = 95):
         """Publish tilt sensor data"""
-        topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/data/tilt"
+        topic = f"sensors/{self.device_id}/data/tilt"
         
         payload = {
             "device_id": self.device_id,
@@ -119,7 +115,7 @@ class SensorPublisher:
     def publish_vibration(self, frequency: float, amplitude_x: float, 
                          amplitude_y: float, amplitude_z: float):
         """Publish vibration sensor data"""
-        topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/data/vibration"
+        topic = f"sensors/{self.device_id}/data/vibration"
         
         rms = (amplitude_x**2 + amplitude_y**2 + amplitude_z**2) ** 0.5 / 3
         peak = max(abs(amplitude_x), abs(amplitude_y), abs(amplitude_z))
@@ -150,7 +146,7 @@ class SensorPublisher:
     def publish_displacement(self, horizontal: float, vertical: float, 
                             cumulative: float, alert_level: int = 0):
         """Publish displacement sensor data"""
-        topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/data/displacement"
+        topic = f"sensors/{self.device_id}/data/displacement"
         
         total = (horizontal**2 + vertical**2) ** 0.5
         rate_of_change = 0.12 if cumulative > 40 else 0.08
@@ -180,7 +176,7 @@ class SensorPublisher:
     def publish_rainfall(self, intensity: float, cumulative_1h: float, 
                         cumulative_24h: float, bucket_count: int):
         """Publish rainfall sensor data"""
-        topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/data/rainfall"
+        topic = f"sensors/{self.device_id}/data/rainfall"
         
         if intensity > 20:
             rain_status = "heavy"
@@ -216,7 +212,7 @@ class SensorPublisher:
     def publish_temperature(self, current: float, min_1h: float, 
                            max_1h: float, humidity: float):
         """Publish temperature sensor data"""
-        topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/data/temperature"
+        topic = f"sensors/{self.device_id}/data/temperature"
         
         payload = {
             "device_id": self.device_id,
@@ -243,7 +239,7 @@ class SensorPublisher:
     def publish_gnss(self, latitude: float, longitude: float, altitude: float, 
                     satellites: int, fix_type: str = "fix_3d"):
         """Publish GNSS/GPS sensor data"""
-        topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/data/gnss"
+        topic = f"sensors/{self.device_id}/data/gnss"
         
         gnss_status = "fixed" if satellites >= 8 else "searching"
         
@@ -272,13 +268,37 @@ class SensorPublisher:
         self.client.publish(topic, json.dumps(payload), qos=0, retain=False)
         print(f"[GNSS] Lat: {latitude}, Lon: {longitude}, Alt: {altitude}m, Sats: {satellites}")
     
-    def publish_status(self):
-        """Publish device status"""
-        topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/status"
+    def publish_soil_moisture(self, moisture_level: float, salinity: float, 
+                             temperature: float = 25.0):
+        """Publish soil moisture sensor data"""
+        topic = f"sensors/{self.device_id}/data/soil_moisture"
         
         payload = {
             "device_id": self.device_id,
-            "device_name": f"Sensor Point - {self.site_id}",
+            "sensor_type": "soil_moisture",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "data": {
+                "moisture_level": moisture_level,  # % or raw value
+                "salinity": salinity,              # mS/cm
+                "temperature": temperature        # °C
+            },
+            "unit": "%",
+            "sequence": self.message_count
+        }
+        
+        json_payload = json.dumps(payload)
+        payload["checksum"] = self.generate_checksum(json_payload)
+        
+        self.client.publish(topic, json.dumps(payload), qos=1, retain=False)
+        print(f"[SOIL_MOISTURE] Level: {moisture_level}%, Salinity: {salinity}mS/cm, Temp: {temperature}°C")
+    
+    def publish_status(self):
+        """Publish device status"""
+        topic = f"sensors/{self.device_id}/status"
+        
+        payload = {
+            "device_id": self.device_id,
+            "device_name": f"Sensor - {self.device_id}",
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "status": "online",
             "battery_level": self.battery_level,
@@ -295,7 +315,7 @@ class SensorPublisher:
     
     def publish_heartbeat(self):
         """Publish heartbeat signal"""
-        topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/heartbeat"
+        topic = f"sensors/{self.device_id}/heartbeat"
         
         payload = {
             "device_id": self.device_id,
@@ -440,9 +460,7 @@ if __name__ == "__main__":
         publisher = SensorPublisher(
             broker_host=MQTT_BROKER,
             broker_port=MQTT_PORT,
-            device_id=device_config.device_id,
-            project_id=device_config.project_id,
-            site_id=device_config.site_id
+            device_id=device_config.device_id
         )
         
         # Store base coordinates for this publisher

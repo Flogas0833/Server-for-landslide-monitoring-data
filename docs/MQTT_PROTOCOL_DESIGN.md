@@ -4,33 +4,33 @@
 
 ### Topic Structure (Cấu Trúc Chủ Đề)
 ```
-landslide/project/{project_id}/site/{site_id}/device/{device_id}/data/{sensor_type}
+sensors/{device_id}/data/{sensor_type}
 ```
 
 ### Ví dụ Chi Tiết
 ```
-landslide/project/PRJ001/site/SITE01/device/DEVICE001/data/tilt
-landslide/project/PRJ001/site/SITE01/device/DEVICE001/data/vibration
-landslide/project/PRJ001/site/SITE01/device/DEVICE001/data/displacement
-landslide/project/PRJ001/site/SITE01/device/DEVICE001/data/rainfall
-landslide/project/PRJ001/site/SITE01/device/DEVICE001/data/temperature
-landslide/project/PRJ001/site/SITE01/device/DEVICE001/data/gnss
+# Sensor Data
+sensors/DEVICE001/data/tilt
+sensors/DEVICE001/data/vibration
+sensors/DEVICE001/data/displacement
+sensors/DEVICE001/data/rainfall
+sensors/DEVICE001/data/temperature
+sensors/DEVICE001/data/gnss
+
+# Device Status & Control
+sensors/DEVICE001/status
+sensors/DEVICE001/heartbeat
+sensors/DEVICE001/command
 ```
 
-### Topics Bổ Sung
+### Wildcard Subscribe (cho Web)
 ```
-# Device Status
-landslide/project/{proj_id}/site/{site_id}/device/{dev_id}/status
-landslide/project/{proj_id}/site/{site_id}/device/{dev_id}/heartbeat
-landslide/project/{proj_id}/site/{site_id}/device/{dev_id}/battery
+# Subscribe to tất cả sensor data
+sensors/+/data/#
 
-# Server Command
-landslide/project/{proj_id}/site/{site_id}/device/{dev_id}/command
-landslide/project/{proj_id}/site/{site_id}/device/{dev_id}/config
-
-# Alerts
-landslide/project/{proj_id}/alerts/critical
-landslide/project/{proj_id}/alerts/warning
+# Subscribe to tất cả thông báo trạng thái
+sensors/+/status
+sensors/+/heartbeat
 ```
 
 ---

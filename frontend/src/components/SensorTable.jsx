@@ -168,6 +168,111 @@ function DisplacementTable({ sensorType, params }) {
     return <TableRenderer table={table} query={query} isLoading={isLoading} />;
 }
 
+function RainfallTable({ sensorType, params }) {
+    const query = useSensorData(sensorType, params);
+    const { data: response, isLoading } = query;
+    const records = response?.data || [];
+
+    const columns = useMemo(
+        () => [
+            columnHelper.accessor('device_id', {
+                header: 'Cảm Biến',
+                cell: (info) => <span className="font-mono text-sm">{info.getValue()}</span>,
+            }),
+            columnHelper.accessor('timestamp', {
+                header: 'Thời Gian',
+                cell: (info) => formatTime(info.getValue()),
+            }),
+            columnHelper.accessor((row) => row.data?.intensity, {
+                id: 'intensity',
+                header: 'Cường Độ (mm/h)',
+                cell: (info) => formatValue(info.getValue()),
+            }),
+            columnHelper.accessor((row) => row.data?.cumulative_1h, {
+                id: 'cumulative_1h',
+                header: 'Tích Lũy 1h (mm)',
+                cell: (info) => formatValue(info.getValue()),
+            }),
+            columnHelper.accessor((row) => row.data?.cumulative_24h, {
+                id: 'cumulative_24h',
+                header: 'Tích Lũy 24h (mm)',
+                cell: (info) => formatValue(info.getValue()),
+            }),
+        ],
+        []
+    );
+
+    const table = useReactTable({
+        data: records,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        initialState: {
+            pagination: {
+                pageSize: 10,
+            },
+        },
+    });
+
+    return <TableRenderer table={table} query={query} isLoading={isLoading} />;
+}
+
+function TemperatureTable({ sensorType, params }) {
+    const query = useSensorData(sensorType, params);
+    const { data: response, isLoading } = query;
+    const records = response?.data || [];
+
+    const columns = useMemo(
+        () => [
+            columnHelper.accessor('device_id', {
+                header: 'Cảm Biến',
+                cell: (info) => <span className="font-mono text-sm">{info.getValue()}</span>,
+            }),
+            columnHelper.accessor('timestamp', {
+                header: 'Thời Gian',
+                cell: (info) => formatTime(info.getValue()),
+            }),
+            columnHelper.accessor((row) => row.data?.current, {
+                id: 'current',
+                header: 'Hiện Tại (°C)',
+                cell: (info) => formatValue(info.getValue()),
+            }),
+            columnHelper.accessor((row) => row.data?.min_1h, {
+                id: 'min_1h',
+                header: 'Thấp Nhất (°C)',
+                cell: (info) => formatValue(info.getValue()),
+            }),
+            columnHelper.accessor((row) => row.data?.max_1h, {
+                id: 'max_1h',
+                header: 'Cao Nhất (°C)',
+                cell: (info) => formatValue(info.getValue()),
+            }),
+            columnHelper.accessor((row) => row.data?.humidity, {
+                id: 'humidity',
+                header: 'Độ Ẩm (%)',
+                cell: (info) => formatValue(info.getValue()),
+            }),
+        ],
+        []
+    );
+
+    const table = useReactTable({
+        data: records,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        initialState: {
+            pagination: {
+                pageSize: 10,
+            },
+        },
+    });
+
+    return <TableRenderer table={table} query={query} isLoading={isLoading} />;
+}
+
 function TableRenderer({ table, query, isLoading }) {
     return (
         <Card className="w-full">
@@ -280,6 +385,10 @@ export function SensorTable({ sensorType, params }) {
             return <VibrationTable sensorType={sensorType} params={params} />;
         case 'displacement':
             return <DisplacementTable sensorType={sensorType} params={params} />;
+        case 'rainfall':
+            return <RainfallTable sensorType={sensorType} params={params} />;
+        case 'temperature':
+            return <TemperatureTable sensorType={sensorType} params={params} />;
         default:
             return <Card className="w-full"><CardContent className="py-4">Loại cảm biến không được hỗ trợ: {sensorType}</CardContent></Card>;
     }

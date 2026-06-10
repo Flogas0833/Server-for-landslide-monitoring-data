@@ -1,19 +1,35 @@
 /**
  * Format timestamp to readable format (GMT+7)
- * Assumes timestamps from backend are in UTC ISO format
+ * Handles timestamps from backend (UTC ISO format without Z suffix)
+ * and converts them to GMT+7 for display
  */
 export const formatTime = (timestamp) => {
     if (!timestamp) return '-';
 
     try {
         // Parse the timestamp
-        const date = new Date(timestamp);
+        // Backend returns UTC timestamps without Z suffix (e.g., "2026-06-10T12:31:11.201541")
+        // We need to explicitly treat them as UTC
+        let dateString = timestamp;
+
+        // If timestamp doesn't have timezone info, assume UTC and add Z suffix
+        if (typeof timestamp === 'string' && !timestamp.endsWith('Z') && !timestamp.includes('+')) {
+            // Check if it's ISO-like format (YYYY-MM-DD or similar)
+            if (/^\d{4}-\d{2}-\d{2}/.test(timestamp)) {
+                dateString = timestamp + 'Z';
+            }
+        }
+
+        const date = new Date(dateString);
 
         // Check if date is valid
-        if (isNaN(date.getTime())) return '-';
+        if (isNaN(date.getTime())) {
+            console.warn('Invalid timestamp format:', timestamp);
+            return '-';
+        }
 
         // Format in GMT+7 using Intl API
-        // The browser will handle timezone conversion properly
+        // The browser will handle timezone conversion from UTC properly
         const formatter = new Intl.DateTimeFormat('vi-VN', {
             year: 'numeric',
             month: '2-digit',

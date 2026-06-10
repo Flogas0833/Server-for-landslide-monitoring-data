@@ -60,7 +60,7 @@ Edit `config/devices.json`:
 ```python
 def publish_soil_moisture(self, moisture_level: float, salinity: float):
     """Publish soil moisture sensor data"""
-    topic = f"landslide/project/{self.project_id}/site/{self.site_id}/device/{self.device_id}/data/soil_moisture"
+    topic = f"sensors/{self.device_id}/data/soil_moisture"
     
     payload = {
         "device_id": self.device_id,

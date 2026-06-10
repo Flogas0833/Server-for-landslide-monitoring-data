@@ -128,6 +128,26 @@
                 ]
             },
             "alert_thresholds": null
+        },
+        {
+            "sensor_type": "soil_moisture",
+            "unit": "%",
+            "description": "Soil moisture and salinity sensor",
+            "valid_ranges": {
+                "moisture_level": [
+                    0,
+                    100
+                ],
+                "salinity": [
+                    0,
+                    10
+                ],
+                "temperature": [
+                    -20,
+                    60
+                ]
+            },
+            "alert_thresholds": null
         }
     ]
 }

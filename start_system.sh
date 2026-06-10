@@ -48,16 +48,16 @@ mkdir -p "$DATABASE_DIR"
 echo -e "${GREEN}✓${NC} Database directory ready"
 echo ""
 
-# Step 1.5: Kill any processes holding ports we need
-echo -e "${YELLOW}[1.5/7]${NC} Freeing ports..."
+# Step 2: Kill any processes holding ports we need
+echo -e "${YELLOW}[2/7]${NC} Freeing ports..."
 pkill -f "npm run dev" 2>/dev/null || true
 fuser -k 5173/tcp 2>/dev/null || lsof -ti :5173 | xargs kill -9 2>/dev/null || true
 sleep 1
 echo -e "${GREEN}✓${NC} Ports cleared"
 echo ""
 
-# Step 2: Start React frontend 
-echo -e "${YELLOW}[2/7]${NC} Starting React frontend..."
+# Step 3: Start React frontend 
+echo -e "${YELLOW}[3/7]${NC} Starting React frontend..."
 cd "$SCRIPT_DIR/frontend"
 if [ -f "package.json" ]; then
     echo "  • Starting dev server on http://localhost:5173..."
@@ -81,8 +81,8 @@ else
 fi
 echo ""
 
-# Step 3: Kill any existing processes
-echo -e "${YELLOW}[3/7]${NC} Cleaning up any existing processes..."
+# Step 4: Kill any existing processes
+echo -e "${YELLOW}[4/7]${NC} Cleaning up any existing processes..."
 pkill -f "mqtt_subscriber.py" 2>/dev/null || true
 pkill -f "mqtt_publisher.py" 2>/dev/null || true
 pkill -f "web_server.py" 2>/dev/null || true
@@ -90,24 +90,67 @@ sleep 2
 echo -e "${GREEN}✓${NC} Cleanup complete"
 echo ""
 
-# Step 4: Start MQTT Broker
-echo -e "${YELLOW}[4/7]${NC} Starting MQTT Broker..."
+# Step 5: Start MQTT Broker (CRITICAL - must run before backend services)
+echo -e "${YELLOW}[5/7]${NC} Starting MQTT Broker..."
 if pgrep -f mosquitto > /dev/null; then
     echo -e "${GREEN}✓${NC} MQTT Broker already running"
 else
-    echo "  • Attempting to start MQTT Broker..."
-    if sudo -n systemctl start mosquitto 2>/dev/null; then
-        sleep 1
-        echo -e "${GREEN}✓${NC} MQTT Broker started"
-    else
-        echo -e "${YELLOW}⚠${NC} Could not start mosquitto (requires sudo). Please ensure mosquitto is running."
-        echo "  Run: sudo systemctl start mosquitto"
+    echo "  • Checking MQTT Broker status..."
+    MOSQUITTO_STARTED=false
+    
+    # Try to start with sudo (may need password)
+    if sudo systemctl start mosquitto 2>/dev/null; then
+        sleep 2
+        if pgrep -f mosquitto > /dev/null; then
+            echo -e "${GREEN}✓${NC} MQTT Broker started successfully"
+            MOSQUITTO_STARTED=true
+        fi
+    fi
+    
+    # If sudo failed, provide helpful message
+    if [ "$MOSQUITTO_STARTED" = false ]; then
+        echo -e "${RED}✗${NC} MQTT Broker not running"
+        echo ""
+        echo "To fix this, open a NEW terminal and run:"
+        echo "  sudo systemctl start mosquitto"
+        echo ""
+        echo "Or set up passwordless sudo (one time):"
+        echo "  echo '$USER ALL=(ALL) NOPASSWD: /usr/sbin/mosquitto, /usr/bin/systemctl' | sudo tee /etc/sudoers.d/mosquitto"
+        echo ""
+        read -p "Press Enter after starting mosquitto in another terminal, or Ctrl+C to cancel..."
+        
+        # Check again
+        if ! pgrep -f mosquitto > /dev/null; then
+            echo -e "${RED}✗${NC} MQTT Broker still not running. Cannot continue."
+            exit 1
+        fi
+        echo -e "${GREEN}✓${NC} MQTT Broker is now running"
     fi
 fi
 echo ""
 
-# Step 5: Verify React dev server is ready
-echo -e "${YELLOW}[5/7]${NC} Verifying React dev server..."
+# Verify MQTT is accessible
+echo "  • Verifying MQTT Broker is accessible..."
+for i in {1..5}; do
+    if timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/1883" 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} MQTT Broker is accessible on port 1883"
+        break
+    fi
+    if [ $i -lt 5 ]; then
+        echo "  ⏳ MQTT not ready, retrying... ($i/5)"
+        sleep 1
+    else
+        echo -e "${RED}✗${NC} MQTT Broker not accessible on port 1883"
+        echo "  Possible fixes:"
+        echo "    1. Restart mosquitto: sudo systemctl restart mosquitto"
+        echo "    2. Check if mosquitto is installed: which mosquitto"
+        exit 1
+    fi
+done
+echo ""
+
+# Step 6: Verify React dev server is ready
+echo -e "${YELLOW}[6/7]${NC} Verifying React dev server..."
 REACT_READY=false
 for i in {1..10}; do
     if timeout 1 bash -c "cat < /dev/null > /dev/tcp/localhost/5173" 2>/dev/null; then
@@ -122,30 +165,57 @@ for i in {1..10}; do
 done
 
 if [ "$REACT_READY" = false ]; then
-    echo -e "${YELLOW}⚠${NC} React dev server not ready, will use Vanilla JS frontend"
+    echo -e "${YELLOW}⚠${NC} React dev server not ready, will use static build"
 fi
 echo ""
-
-# Step 5: Start backend services
-echo -e "${YELLOW}[6/7]${NC} Starting backend services..."
 cd "$BACKEND_DIR"
 
 echo "  • Starting MQTT Subscriber..."
 $VENV_PYTHON mqtt_subscriber.py > /tmp/subscriber.log 2>&1 &
+SUBSCRIBER_PID=$!
 sleep 2
+
+# Check if subscriber started successfully
+if ! ps -p $SUBSCRIBER_PID > /dev/null 2>&1; then
+    echo -e "${RED}✗${NC} MQTT Subscriber failed to start"
+    echo "  Error log:"
+    cat /tmp/subscriber.log | head -20
+    exit 1
+fi
+echo -e "${GREEN}✓${NC} MQTT Subscriber started (PID: $SUBSCRIBER_PID)"
 
 echo "  • Starting MQTT Publisher (sensor simulator)..."
 $VENV_PYTHON mqtt_publisher.py > /tmp/publisher.log 2>&1 &
+PUBLISHER_PID=$!
 sleep 2
+
+# Check if publisher started successfully
+if ! ps -p $PUBLISHER_PID > /dev/null 2>&1; then
+    echo -e "${RED}✗${NC} MQTT Publisher failed to start"
+    echo "  Error log:"
+    cat /tmp/publisher.log | head -20
+    exit 1
+fi
+echo -e "${GREEN}✓${NC} MQTT Publisher started (PID: $PUBLISHER_PID)"
 
 echo "  • Starting Web Server..."
 $VENV_PYTHON web_server.py > /tmp/webserver.log 2>&1 &
+WEBSERVER_PID=$!
 sleep 5
 
-echo -e "${GREEN}✓${NC} All backend services started"
+# Check if web server started successfully
+if ! ps -p $WEBSERVER_PID > /dev/null 2>&1; then
+    echo -e "${RED}✗${NC} Web Server failed to start"
+    echo "  Error log:"
+    cat /tmp/webserver.log | head -30
+    exit 1
+fi
+echo -e "${GREEN}✓${NC} Web Server started (PID: $WEBSERVER_PID)"
+echo ""
+echo -e "${GREEN}✓${NC} All backend services started successfully"
 echo ""
 
-# Step 6: Verify services
+# Step 7: Verify services
 echo -e "${YELLOW}[7/7]${NC} Verifying services..."
 SERVICES_OK=true
 MAX_RETRIES=10
@@ -166,15 +236,19 @@ done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     echo -e "${RED}✗${NC} Web Server not responding after $MAX_RETRIES attempts"
+    echo "  Web Server logs:"
+    cat /tmp/webserver.log | tail -30
     SERVICES_OK=false
 fi
 
 # Check API endpoint
 if [ "$SERVICES_OK" = true ]; then
-    if timeout 2 curl -s http://localhost:5000/api/devices > /dev/null 2>&1; then
-        echo -e "${GREEN}✓${NC} API endpoint responding"
+    # Check HTTP status code directly - 200 OK or 401 Unauthorized (auth required) both mean API is working
+    HTTP_CODE=$(timeout 2 curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/devices 2>&1)
+    if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "401" ]]; then
+        echo -e "${GREEN}✓${NC} API endpoint responding (HTTP $HTTP_CODE - this is expected)"
     else
-        echo -e "${RED}✗${NC} API endpoint not responding"
+        echo -e "${RED}✗${NC} API endpoint error: HTTP $HTTP_CODE"
         SERVICES_OK=false
     fi
 fi
@@ -216,6 +290,7 @@ if [ "$SERVICES_OK" = true ]; then
     echo "   pkill -f 'mqtt_subscriber.py'"
     echo "   pkill -f 'mqtt_publisher.py'"
     echo "   pkill -f 'web_server.py'"
+    echo "   npm run dev  # in frontend directory"
     echo "============================================================================"
     echo ""
     
@@ -225,8 +300,14 @@ else
     echo -e "${RED}✗ SYSTEM STARTUP FAILED${NC}"
     echo ""
     echo "Check logs:"
-    echo "  cat /tmp/webserver.log"
-    echo "  cat /tmp/subscriber.log"
-    echo "  cat /tmp/publisher.log"
+    echo "  • Web Server: cat /tmp/webserver.log"
+    echo "  • Subscriber: cat /tmp/subscriber.log"
+    echo "  • Publisher:  cat /tmp/publisher.log"
+    echo ""
+    echo "Common fixes:"
+    echo "  1. Start MQTT Broker manually: sudo systemctl start mosquitto"
+    echo "  2. Check port conflicts: lsof -i :5000 (backend) or lsof -i :1883 (MQTT)"
+    echo "  3. Check Python venv: source .venv/bin/activate"
+    echo ""
     exit 1
 fi
