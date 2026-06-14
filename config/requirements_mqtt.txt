@@ -12,6 +12,9 @@ requests>=2.28.0
 PyJWT==2.8.0
 python-dotenv==0.19.0
 
+# Production Server
+gunicorn>=20.1.0
+
 # Optional but recommended:
 # werkzeug==2.3.0     # WSGI utility library
 # jinja2==3.1.2       # Template engine

@@ -69,9 +69,13 @@ else:
     print("ℹ️ Using React DEV mode (proxying to dev server)")
     app = Flask(__name__)
 
+# Get allowed origins from environment variable
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000').split(',')
+allowed_origins = [origin.strip() for origin in allowed_origins]  # Remove whitespace
+
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:5173", "http://localhost:3000"],
+        "origins": allowed_origins,
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True

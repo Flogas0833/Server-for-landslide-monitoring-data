@@ -30,12 +30,9 @@ WORKDIR /app
 # Set environment to avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies with optimizations
+# Install only essential system dependencies (minimal)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    mosquitto-clients \
-    supervisor \
-    nginx \
     curl \
     ca-certificates \
     && apt-get clean \
@@ -54,21 +51,17 @@ COPY database/ ./database/
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 # Create necessary directories
-RUN mkdir -p logs && mkdir -p database && mkdir -p /var/log/supervisor
-
-# Copy configuration files
-COPY docker/nginx.conf /etc/nginx/sites-available/default
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN mkdir -p logs && mkdir -p database
 
 # Copy environment template
 COPY .env.example .env
 
-# Expose ports
-EXPOSE 5000 3000 80 443 1883
+# Expose port (Railway will proxy)
+EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:5000/api/health || exit 1
 
-# Start services
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Start Flask app with Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "backend.web_server:app"]
