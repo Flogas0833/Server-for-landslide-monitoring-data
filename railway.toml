@@ -1,0 +1,15 @@
+# Railway.app Configuration for Landslide Monitoring System
+# Documentation: https://docs.railway.app/guides/deploy
+
+[build]
+# Railway will automatically detect and use Dockerfile
+dockerfile = "Dockerfile"
+
+[deploy]
+# Start command for the app
+startCommand = "python backend/web_server.py"
+# Or if using Gunicorn:
+# startCommand = "gunicorn --bind 0.0.0.0:5000 --workers 4 backend.web_server:app"
+
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
