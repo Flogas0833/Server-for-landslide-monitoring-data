@@ -26,8 +26,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Set environment to avoid interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     mosquitto-clients \
     supervisor \
     nginx \
