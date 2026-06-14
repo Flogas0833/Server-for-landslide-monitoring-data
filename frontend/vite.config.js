@@ -15,12 +15,12 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    strictPort: false,  // Allow fallback to next port if 5173 is busy
+    strictPort: false,
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
-        rewrite: (path) => path, // Keep the /api prefix
+        rewrite: (path) => path,
       },
     },
   },
@@ -29,5 +29,14 @@ export default defineConfig({
     sourcemap: false,
     target: 'es2020',
     minify: 'esbuild',
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Ignore specific rollup warnings
+        if (warning.code === 'EXTERNAL_NO_STRIPPING') return
+        if (warning.code === 'UNRESOLVED_IMPORT') return
+        if (warning.message.includes('external')) return
+        warn(warning)
+      },
+    },
   },
 })
