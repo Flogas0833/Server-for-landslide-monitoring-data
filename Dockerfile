@@ -9,16 +9,20 @@ FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-# Copy only package.json (package-lock.json excluded via .dockerignore)
+# Copy only package.json first
 COPY frontend/package.json ./
 
-# Install dependencies with optimizations for Alpine/musl
-RUN npm install --legacy-peer-deps --production=false --omit=optional
+# Clean npm cache and explicitly remove any lock files before install
+RUN npm cache clean --force && \
+    rm -f package-lock.json
 
-# Copy frontend source (package-lock.json will be excluded by .dockerignore)
+# Install dependencies with explicit musl support and build from source for native modules
+RUN npm install --legacy-peer-deps --production=false --build=missing
+
+# Copy frontend source (excluding package-lock.json via .dockerignore)
 COPY frontend/ .
 
-# Build production bundle with increased memory and optimizations
+# Build production bundle with increased memory
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 ENV NODE_ENV=production
 RUN npm run build
