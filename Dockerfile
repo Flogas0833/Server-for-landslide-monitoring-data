@@ -27,17 +27,6 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Set environment to avoid interactive prompts
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install only essential system dependencies (minimal)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
 # Copy requirements and install Python dependencies
 COPY config/requirements_mqtt.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
@@ -59,9 +48,9 @@ COPY .env.example .env
 # Expose port (Railway will proxy)
 EXPOSE 5000
 
-# Health check
+# Health check using Python (no curl dependency)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:5000/api/health || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health', timeout=5)"
 
 # Start Flask app with Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "backend.web_server:app"]
