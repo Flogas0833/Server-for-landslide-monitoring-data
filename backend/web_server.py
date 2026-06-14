@@ -798,6 +798,36 @@ def health_check():
     """Health check endpoint"""
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
 
+# ============ STATIC FILES SERVING ============
+
+# Serve static files from React dist folder (for production)
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static files from React dist folder"""
+    if REACT_BUILD_MODE:
+        # Try to serve the requested file
+        file_path = os.path.join(REACT_BUILD_DIR, path)
+        if os.path.isfile(file_path):
+            return send_from_directory(REACT_BUILD_DIR, path)
+        
+        # If file not found, serve index.html (for React Router SPA)
+        if os.path.isfile(os.path.join(REACT_BUILD_DIR, 'index.html')):
+            return send_from_directory(REACT_BUILD_DIR, 'index.html')
+    
+    # If not in build mode or file not found, return 404
+    return jsonify({'error': 'Not found'}), 404
+
+# Serve index.html at root for React SPA
+@app.route('/')
+def serve_index():
+    """Serve index.html for React SPA"""
+    if REACT_BUILD_MODE:
+        index_path = os.path.join(REACT_BUILD_DIR, 'index.html')
+        if os.path.isfile(index_path):
+            return send_from_directory(REACT_BUILD_DIR, 'index.html')
+    
+    return jsonify({'error': 'React frontend not available'}), 503
+
 @app.route('/api/health', methods=['GET'])
 def api_health():
     """API health check endpoint"""
