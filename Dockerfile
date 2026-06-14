@@ -9,11 +9,11 @@ FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-# Copy package files
-COPY frontend/package*.json ./
+# Copy only package.json first (not package-lock.json to avoid musl issues)
+COPY frontend/package.json ./
 
-# Install dependencies with optimizations
-RUN npm install --legacy-peer-deps --no-optional --production=false
+# Install dependencies with optimizations for Alpine/musl
+RUN npm install --legacy-peer-deps --no-optional --production=false --force
 
 # Copy frontend source
 COPY frontend/ .
