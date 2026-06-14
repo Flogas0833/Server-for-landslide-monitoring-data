@@ -5,21 +5,22 @@
 # ============================================================================
 
 # Stage 1: Frontend build
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
 # Copy package files
 COPY frontend/package*.json ./
 
-# Install dependencies
-RUN npm install --legacy-peer-deps
+# Install dependencies with optimizations
+RUN npm install --legacy-peer-deps --no-optional --production=false
 
 # Copy frontend source
 COPY frontend/ .
 
-# Build production bundle with increased memory
-ENV NODE_OPTIONS="--max-old-space-size=2048"
+# Build production bundle with increased memory and optimizations
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_ENV=production
 RUN npm run build
 
 # Stage 2: Backend runtime
