@@ -30,13 +30,16 @@ WORKDIR /app
 # Set environment to avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install system dependencies with optimizations
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
     mosquitto-clients \
     supervisor \
     nginx \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy requirements and install Python dependencies
 COPY config/requirements_mqtt.txt ./requirements.txt
