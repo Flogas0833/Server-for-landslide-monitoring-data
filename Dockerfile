@@ -5,21 +5,17 @@
 # ============================================================================
 
 # Stage 1: Frontend build
-FROM node:22-alpine AS frontend-builder
+FROM node:22-slim AS frontend-builder
 
 WORKDIR /app/frontend
 
-# Copy only package.json first
+# Copy package.json
 COPY frontend/package.json ./
 
-# Clean npm cache and explicitly remove any lock files before install
-RUN npm cache clean --force && \
-    rm -f package-lock.json
+# Install dependencies
+RUN npm install --legacy-peer-deps --production=false
 
-# Install dependencies with explicit musl support and build from source for native modules
-RUN npm install --legacy-peer-deps --production=false --build=missing
-
-# Copy frontend source (excluding package-lock.json via .dockerignore)
+# Copy frontend source
 COPY frontend/ .
 
 # Build production bundle with increased memory

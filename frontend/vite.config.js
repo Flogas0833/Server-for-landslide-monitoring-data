@@ -27,16 +27,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    target: ['es2020'],
-    cssTarget: 'es2020',
+    target: 'es2020',
     minify: 'esbuild',
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['recharts', 'leaflet', 'react-leaflet'],
-        },
-      },
-    },
   },
 })
