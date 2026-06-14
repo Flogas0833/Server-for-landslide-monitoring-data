@@ -18,7 +18,8 @@ RUN npm install --legacy-peer-deps
 # Copy frontend source
 COPY frontend/ .
 
-# Build production bundle
+# Build production bundle with increased memory
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 RUN npm run build
 
 # Stage 2: Backend runtime
