@@ -5,6 +5,7 @@ Handles automatic database setup and seeding on application startup
 
 import os
 import sqlite3
+import json
 from database import SensorDatabase
 from jwt_auth_manager import JWTAuthManager
 
@@ -19,6 +20,97 @@ def check_db_needs_seeding(db: SensorDatabase) -> bool:
     except Exception as e:
         print(f"Error checking database: {e}")
         return True
+
+
+def load_devices_from_config(config_path: str = None) -> list:
+    """
+    Load devices from config/devices.json
+    
+    Args:
+        config_path: Path to devices.json (if None, uses default location)
+        
+    Returns:
+        List of device configurations
+    """
+    if config_path is None:
+        # Calculate path relative to backend directory
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(backend_dir, '..', 'config', 'devices.json')
+    
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get('devices', [])
+    except Exception as e:
+        print(f"Warning: Could not load devices from {config_path}: {e}")
+    
+    return []
+
+
+def seed_devices(db: SensorDatabase, force: bool = False) -> bool:
+    """
+    Seed database with devices from config/devices.json
+    
+    Args:
+        db: SensorDatabase instance
+        force: Force re-seeding even if devices exist
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    
+    devices = load_devices_from_config()
+    
+    if not devices:
+        print("ℹ No devices found in config/devices.json")
+        return False
+    
+    # Check if devices already exist
+    if not force:
+        try:
+            existing_devices = db.get_all_devices()
+            if existing_devices and len(existing_devices) > 0:
+                print(f"ℹ Database already has {len(existing_devices)} device(s), skipping device seed")
+                return True
+        except Exception as e:
+            print(f"Warning: Could not check existing devices: {e}")
+    
+    print("\n🔧 SEEDING DEVICES FROM CONFIG")
+    print("-"*60)
+    
+    created_count = 0
+    for device_config in devices:
+        try:
+            device_id = device_config.get('device_id')
+            name = device_config.get('name', device_id)
+            
+            # Register device using register_device method
+            success = db.register_device(
+                device_id=device_id,
+                project_id=device_config.get('project_id', 'PRJ001'),
+                site_id=device_config.get('site_id', ''),
+                province=device_config.get('province', ''),
+                latitude=device_config.get('base_lat', 0),
+                longitude=device_config.get('base_lon', 0),
+                name=name
+            )
+            
+            if success:
+                print(f"✅ Added device: {device_id}")
+                print(f"   └─ Name: {name}")
+                print(f"   └─ Location: ({device_config.get('base_lat', 0)}, {device_config.get('base_lon', 0)})")
+                created_count += 1
+            else:
+                print(f"❌ Failed to add device {device_id}")
+        
+        except Exception as e:
+            print(f"❌ Error adding device {device_config.get('device_id', 'unknown')}: {e}")
+    
+    print("-"*60)
+    print(f"✨ Devices seeding complete! ({created_count} device(s) added)\n")
+    
+    return created_count > 0
 
 
 def seed_database(db: SensorDatabase, force: bool = False) -> bool:
@@ -134,6 +226,26 @@ def seed_database(db: SensorDatabase, force: bool = False) -> bool:
     return created_count > 0
 
 
+def seed_users_and_devices(db: SensorDatabase, force: bool = False) -> bool:
+    """
+    Seed both users and devices to database
+    
+    Args:
+        db: SensorDatabase instance
+        force: Force re-seeding
+        
+    Returns:
+        True if seeding was performed
+    """
+    # Seed users
+    users_seeded = seed_database(db, force=force)
+    
+    # Seed devices
+    devices_seeded = seed_devices(db, force=force)
+    
+    return users_seeded or devices_seeded
+
+
 def initialize_app_database(db: SensorDatabase = None) -> bool:
     """
     Initialize database on application startup
@@ -161,7 +273,7 @@ def initialize_app_database(db: SensorDatabase = None) -> bool:
         print("✓ Database tables initialized\n")
         
         # Seed with default data if needed
-        seed_database(db, force=False)
+        seed_users_and_devices(db, force=False)
         
         return True
         
