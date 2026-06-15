@@ -38,7 +38,7 @@ COPY backend/ ./backend/
 COPY config/ ./config/
 COPY database/ ./database/
 COPY seed_initial_data.py ./
-COPY docker-entrypoint.sh ./
+COPY run.py ./
 
 # Copy built frontend from Stage 1
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
@@ -53,9 +53,6 @@ RUN mkdir -p logs && mkdir -p database
 # Copy environment template
 COPY .env.example .env
 
-# Make entrypoint script executable
-RUN chmod +x /app/docker-entrypoint.sh
-
 # Expose port (Railway will proxy)
 EXPOSE 5000
 
@@ -63,5 +60,5 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health', timeout=5)"
 
-# Run entrypoint script which seeds database and starts Flask
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# Run Python startup script that seeds database and starts Flask
+CMD ["python", "run.py"]
