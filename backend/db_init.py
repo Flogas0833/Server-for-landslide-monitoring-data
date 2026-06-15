@@ -268,6 +268,62 @@ def seed_users_and_devices(db: SensorDatabase, force: bool = False) -> bool:
     return users_seeded or devices_seeded
 
 
+def seed_thresholds(db: SensorDatabase) -> bool:
+    """
+    Seed default alert thresholds for provinces
+    
+    Args:
+        db: SensorDatabase instance
+        
+    Returns:
+        True if successful
+    """
+    
+    default_thresholds = {
+        'Hà Nội': {
+            'tilt': {'yellow': 5.0, 'red': 10.0},
+            'vibration': {'yellow': 0.5, 'red': 1.0},
+            'displacement': {'yellow': 10.0, 'red': 20.0},
+            'rainfall': {'yellow': 100.0, 'red': 200.0}
+        },
+        'Hải Phòng': {
+            'tilt': {'yellow': 5.0, 'red': 10.0},
+            'vibration': {'yellow': 0.5, 'red': 1.0},
+            'displacement': {'yellow': 10.0, 'red': 20.0},
+            'rainfall': {'yellow': 100.0, 'red': 200.0}
+        }
+    }
+    
+    print("\n📊 SEEDING THRESHOLDS")
+    print("-"*60)
+    
+    for province, sensor_thresholds in default_thresholds.items():
+        for sensor_type, thresholds in sensor_thresholds.items():
+            try:
+                # Save yellow threshold
+                db.save_threshold_by_province(
+                    province=province,
+                    sensor_type=sensor_type,
+                    threshold_name='yellow',
+                    value=thresholds.get('yellow', 0)
+                )
+                
+                # Save red threshold
+                db.save_threshold_by_province(
+                    province=province,
+                    sensor_type=sensor_type,
+                    threshold_name='red',
+                    value=thresholds.get('red', 0)
+                )
+                
+                print(f"✅ {province} - {sensor_type}: yellow={thresholds['yellow']}, red={thresholds['red']}")
+            except Exception as e:
+                print(f"❌ Error: {e}")
+    
+    print("-"*60 + "\n")
+    return True
+
+
 def initialize_app_database(db: SensorDatabase = None) -> bool:
     """
     Initialize database on application startup
@@ -298,6 +354,11 @@ def initialize_app_database(db: SensorDatabase = None) -> bool:
                 print("✓ Database restored from template\n")
                 # Now create SensorDatabase instance with restored DB
                 db = SensorDatabase(db_path)
+                # Seed thresholds even if restoring from template
+                try:
+                    seed_thresholds(db)
+                except Exception as e:
+                    print(f"Warning: Could not seed thresholds: {e}\n")
                 return True
         
         # Create new SensorDatabase instance (will create empty DB if needed)
@@ -311,6 +372,7 @@ def initialize_app_database(db: SensorDatabase = None) -> bool:
         if check_db_needs_seeding(db):
             print("🌱 Database is empty, seeding with default data...\n")
             seed_users_and_devices(db, force=False)
+            seed_thresholds(db)
         else:
             print("✓ Database already initialized with data\n")
         
