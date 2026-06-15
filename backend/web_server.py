@@ -14,6 +14,7 @@ from flask_cors import CORS
 from database import SensorDatabase
 from alert_manager import AlertManager, DangerLevel
 from jwt_auth_manager import JWTAuthManager, RBACManager, require_auth, require_role, require_permission
+from db_init import initialize_app_database
 from datetime import datetime, timedelta, timezone
 from timezone_utils import utc_to_gmt7, now_utc_iso, now_gmt7_iso
 import csv
@@ -96,6 +97,12 @@ def handle_preflight():
 
 # Initialize database
 db = SensorDatabase()
+
+# Initialize database tables and seed with default data if needed
+print("\n" + "="*60)
+print("🗄️  INITIALIZING DATABASE")
+print("="*60)
+initialize_app_database(db)
 
 # Initialize alert manager
 alert_manager = AlertManager()

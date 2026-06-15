@@ -19,7 +19,10 @@ export default function MapComponent({ onDeviceSelect }) {
     const mapRef = useRef(null);
     const markersRef = useRef({});
     const [map, setMap] = useState(null);
-    const { data: devices = [], isLoading, error } = useDevices();
+    const { data: devicesData, isLoading, error } = useDevices();
+
+    // Ensure devices is always an array
+    const devices = Array.isArray(devicesData) ? devicesData : (devicesData?.devices || []);
 
     // Initialize map
     useEffect(() => {

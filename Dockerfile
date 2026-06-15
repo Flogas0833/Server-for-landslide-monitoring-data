@@ -44,6 +44,10 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 # Create necessary directories
 RUN mkdir -p logs && mkdir -p database
 
+# Initialize database with seed data (optional - can be done at runtime)
+# Uncomment to pre-seed database during build:
+# RUN cd /app && python -c "from backend.db_init import initialize_app_database; initialize_app_database()"
+
 # Copy environment template
 COPY .env.example .env
 

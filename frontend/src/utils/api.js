@@ -41,13 +41,26 @@ export const deviceAPI = {
     getAllDevices: async () => {
         // Use public endpoint first (no auth required), fallback to private
         try {
-            const { data } = await api.get('/api/devices/public');
-            // Extract devices array from response
-            return data.devices || data || [];
+            console.log('[API] Fetching /api/devices/public...');
+            const response1 = await api.get('/api/devices/public');
+            console.log('[API] /api/devices/public response:', response1.data);
+            const devices1 = response1.data.devices || response1.data || [];
+            console.log('[API] Extracted devices:', devices1);
+            return devices1;
         } catch (error) {
+            console.log('[API] /api/devices/public failed, trying authenticated endpoint...');
             // Fallback to authenticated endpoint
-            const { data } = await api.get('/api/devices');
-            return data || [];
+            try {
+                console.log('[API] Fetching /api/devices...');
+                const response2 = await api.get('/api/devices');
+                console.log('[API] /api/devices response:', response2.data);
+                const devices2 = response2.data.devices || response2.data || [];
+                console.log('[API] Extracted devices:', devices2);
+                return devices2;
+            } catch (error2) {
+                console.error('[API] Both endpoints failed:', error, error2);
+                return [];
+            }
         }
     },
 

@@ -6,7 +6,10 @@ import { MapPin, Wifi, WifiOff } from 'lucide-react';
 
 export default function DevicePanel({ selectedDeviceId, onDeviceSelect }) {
     const [searchTerm, setSearchTerm] = useState('');
-    const { data: devices = [], isLoading } = useDevices();
+    const { data: devicesData, isLoading } = useDevices();
+
+    // Ensure devices is always an array
+    const devices = Array.isArray(devicesData) ? devicesData : (devicesData?.devices || []);
 
     const filteredDevices = useMemo(() => {
         return devices.filter(
