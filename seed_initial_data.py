@@ -26,6 +26,16 @@ def seed_all():
     db = SensorDatabase()
     print("✓ Database initialized\n")
     
+    # Check if data already seeded
+    try:
+        admin = db.get_user_by_username('admin')
+        if admin:
+            print("ℹ Database already contains data, skipping seed")
+            print("  (Users, devices, and thresholds already present)\n")
+            return
+    except Exception as e:
+        print(f"Warning: Could not check existing data: {e}\n")
+    
     # Seed users
     print("🌱 SEEDING USERS")
     print("-"*70)
@@ -180,4 +190,12 @@ def seed_all():
 
 
 if __name__ == '__main__':
-    seed_all()
+    try:
+        seed_all()
+        print("✅ Seed script completed successfully")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\n❌ Seed script failed: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

@@ -37,6 +37,8 @@ RUN pip install --upgrade pip setuptools wheel && \
 COPY backend/ ./backend/
 COPY config/ ./config/
 COPY database/ ./database/
+COPY seed_initial_data.py ./
+COPY docker-entrypoint.sh ./
 
 # Copy built frontend from Stage 1
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
@@ -51,6 +53,9 @@ RUN mkdir -p logs && mkdir -p database
 # Copy environment template
 COPY .env.example .env
 
+# Make entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Expose port (Railway will proxy)
 EXPOSE 5000
 
@@ -58,5 +63,5 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health', timeout=5)"
 
-# Start Flask app with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "backend.web_server:app"]
+# Run entrypoint script which seeds database and starts Flask
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
