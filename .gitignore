@@ -72,12 +72,15 @@ out/
 # ============================================================================
 # Database & Logs
 # ============================================================================
+# Ignore all .db files EXCEPT templates
 *.db
+!*.db.template
 *.sqlite
 *.sqlite3
 *.db-journal
 database/*.db
-database/*.db-*
+!database/*.db.template
+database/*.db-backup*
 
 # Logs
 logs/

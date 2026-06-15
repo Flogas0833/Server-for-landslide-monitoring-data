@@ -6,8 +6,30 @@ Handles automatic database setup and seeding on application startup
 import os
 import sqlite3
 import json
+import shutil
 from database import SensorDatabase
 from jwt_auth_manager import JWTAuthManager
+
+
+def restore_from_template(db_path: str, template_path: str) -> bool:
+    """
+    Restore database from template file
+    
+    Args:
+        db_path: Path to target database file
+        template_path: Path to template database file
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
+        shutil.copy2(template_path, db_path)
+        print(f"✓ Restored database from template: {template_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Error restoring from template: {e}")
+        return False
 
 
 def check_db_needs_seeding(db: SensorDatabase) -> bool:
@@ -20,97 +42,6 @@ def check_db_needs_seeding(db: SensorDatabase) -> bool:
     except Exception as e:
         print(f"Error checking database: {e}")
         return True
-
-
-def load_devices_from_config(config_path: str = None) -> list:
-    """
-    Load devices from config/devices.json
-    
-    Args:
-        config_path: Path to devices.json (if None, uses default location)
-        
-    Returns:
-        List of device configurations
-    """
-    if config_path is None:
-        # Calculate path relative to backend directory
-        backend_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(backend_dir, '..', 'config', 'devices.json')
-    
-    try:
-        if os.path.exists(config_path):
-            with open(config_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data.get('devices', [])
-    except Exception as e:
-        print(f"Warning: Could not load devices from {config_path}: {e}")
-    
-    return []
-
-
-def seed_devices(db: SensorDatabase, force: bool = False) -> bool:
-    """
-    Seed database with devices from config/devices.json
-    
-    Args:
-        db: SensorDatabase instance
-        force: Force re-seeding even if devices exist
-        
-    Returns:
-        True if successful, False otherwise
-    """
-    
-    devices = load_devices_from_config()
-    
-    if not devices:
-        print("ℹ No devices found in config/devices.json")
-        return False
-    
-    # Check if devices already exist
-    if not force:
-        try:
-            existing_devices = db.get_all_devices()
-            if existing_devices and len(existing_devices) > 0:
-                print(f"ℹ Database already has {len(existing_devices)} device(s), skipping device seed")
-                return True
-        except Exception as e:
-            print(f"Warning: Could not check existing devices: {e}")
-    
-    print("\n🔧 SEEDING DEVICES FROM CONFIG")
-    print("-"*60)
-    
-    created_count = 0
-    for device_config in devices:
-        try:
-            device_id = device_config.get('device_id')
-            name = device_config.get('name', device_id)
-            
-            # Register device using register_device method
-            success = db.register_device(
-                device_id=device_id,
-                project_id=device_config.get('project_id', 'PRJ001'),
-                site_id=device_config.get('site_id', ''),
-                province=device_config.get('province', ''),
-                latitude=device_config.get('base_lat', 0),
-                longitude=device_config.get('base_lon', 0),
-                name=name
-            )
-            
-            if success:
-                print(f"✅ Added device: {device_id}")
-                print(f"   └─ Name: {name}")
-                print(f"   └─ Location: ({device_config.get('base_lat', 0)}, {device_config.get('base_lon', 0)})")
-                created_count += 1
-            else:
-                print(f"❌ Failed to add device {device_id}")
-        
-        except Exception as e:
-            print(f"❌ Error adding device {device_config.get('device_id', 'unknown')}: {e}")
-    
-    print("-"*60)
-    print(f"✨ Devices seeding complete! ({created_count} device(s) added)\n")
-    
-    return created_count > 0
 
 
 def seed_database(db: SensorDatabase, force: bool = False) -> bool:
@@ -226,6 +157,97 @@ def seed_database(db: SensorDatabase, force: bool = False) -> bool:
     return created_count > 0
 
 
+def load_devices_from_config(config_path: str = None) -> list:
+    """
+    Load devices from config/devices.json
+    
+    Args:
+        config_path: Path to devices.json (if None, uses default location)
+        
+    Returns:
+        List of device configurations
+    """
+    if config_path is None:
+        # Calculate path relative to backend directory
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(backend_dir, '..', 'config', 'devices.json')
+    
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get('devices', [])
+    except Exception as e:
+        print(f"Warning: Could not load devices from {config_path}: {e}")
+    
+    return []
+
+
+def seed_devices(db: SensorDatabase, force: bool = False) -> bool:
+    """
+    Seed database with devices from config/devices.json
+    
+    Args:
+        db: SensorDatabase instance
+        force: Force re-seeding even if devices exist
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    
+    devices = load_devices_from_config()
+    
+    if not devices:
+        print("ℹ No devices found in config/devices.json")
+        return False
+    
+    # Check if devices already exist
+    if not force:
+        try:
+            existing_devices = db.get_all_devices()
+            if existing_devices and len(existing_devices) > 0:
+                print(f"ℹ Database already has {len(existing_devices)} device(s), skipping device seed")
+                return True
+        except Exception as e:
+            print(f"Warning: Could not check existing devices: {e}")
+    
+    print("\n🔧 SEEDING DEVICES FROM CONFIG")
+    print("-"*60)
+    
+    created_count = 0
+    for device_config in devices:
+        try:
+            device_id = device_config.get('device_id')
+            name = device_config.get('name', device_id)
+            
+            # Register device using register_device method
+            success = db.register_device(
+                device_id=device_id,
+                project_id=device_config.get('project_id', 'PRJ001'),
+                site_id=device_config.get('site_id', ''),
+                province=device_config.get('province', ''),
+                latitude=device_config.get('base_lat', 0),
+                longitude=device_config.get('base_lon', 0),
+                name=name
+            )
+            
+            if success:
+                print(f"✅ Added device: {device_id}")
+                print(f"   └─ Name: {name}")
+                print(f"   └─ Location: ({device_config.get('base_lat', 0)}, {device_config.get('base_lon', 0)})")
+                created_count += 1
+            else:
+                print(f"❌ Failed to add device {device_id}")
+        
+        except Exception as e:
+            print(f"❌ Error adding device {device_config.get('device_id', 'unknown')}: {e}")
+    
+    print("-"*60)
+    print(f"✨ Devices seeding complete! ({created_count} device(s) added)\n")
+    
+    return created_count > 0
+
+
 def seed_users_and_devices(db: SensorDatabase, force: bool = False) -> bool:
     """
     Seed both users and devices to database
@@ -258,22 +280,39 @@ def initialize_app_database(db: SensorDatabase = None) -> bool:
     """
     
     if db is None:
+        # Check for template BEFORE creating SensorDatabase instance
+        # (because SensorDatabase auto-creates empty DB on instantiation)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        db_path = os.path.join(project_root, 'database', 'sensors.db')
+        template_path = os.path.join(
+            os.path.dirname(db_path),
+            'sensors.db.template'
+        )
+        
+        db_exists = os.path.exists(db_path)
+        
+        if not db_exists and os.path.exists(template_path):
+            print(f"📁 Database not found")
+            print(f"📋 Found template database, restoring from template...")
+            if restore_from_template(db_path, template_path):
+                print("✓ Database restored from template\n")
+                # Now create SensorDatabase instance with restored DB
+                db = SensorDatabase(db_path)
+                return True
+        
+        # Create new SensorDatabase instance (will create empty DB if needed)
         db = SensorDatabase()
     
     try:
-        # Check if database file exists
-        db_exists = os.path.exists(db.db_path)
-        
-        if not db_exists:
-            print(f"📁 Creating new database at: {db.db_path}")
-        
-        # Initialize tables (creates if not exist)
-        print("📊 Initializing database tables...")
-        db.init_database()
+        # Database tables already created by SensorDatabase.__init__
         print("✓ Database tables initialized\n")
         
-        # Seed with default data if needed
-        seed_users_and_devices(db, force=False)
+        # Seed with default data if no users exist yet
+        if check_db_needs_seeding(db):
+            print("🌱 Database is empty, seeding with default data...\n")
+            seed_users_and_devices(db, force=False)
+        else:
+            print("✓ Database already initialized with data\n")
         
         return True
         
@@ -284,5 +323,4 @@ def initialize_app_database(db: SensorDatabase = None) -> bool:
 
 if __name__ == '__main__':
     # Test script - can be run directly
-    db = SensorDatabase()
-    initialize_app_database(db)
+    initialize_app_database()
