@@ -1,8 +1,4 @@
-# Landslide Monitoring System — Tóm tắt
-
-Nhỏ gọn: hệ thống thu thập dữ liệu cảm biến qua MQTT, xử lý cảnh báo và hiển thị trên giao diện web.
-
-Phiên bản ngắn này mô tả chức năng chính và cách khởi động nhanh.
+# Landslide Monitoring System 
 
 ## Chức năng chính
 - Thu thập dữ liệu từ nhiều loại cảm biến (tilt, vibration, displacement, rainfall, temperature, GNSS) qua MQTT.
@@ -51,5 +47,3 @@ docker compose up --build
 ## Liên hệ & ghi chú
 - File cấu hình MQTT: `config/mosquitto.conf` và `config/mosquitto_acl.conf`.
 - Script khởi động toàn hệ thống: `scripts/start_system.sh`.
-- Nếu cần tôi có thể mở rộng README này theo mẫu báo cáo hoặc thêm sơ đồ ngắn.
-
