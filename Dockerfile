@@ -37,8 +37,8 @@ RUN pip install --upgrade pip setuptools wheel && \
 COPY backend/ ./backend/
 COPY config/ ./config/
 COPY database/ ./database/
-COPY seed_initial_data.py ./
-COPY run.py ./
+COPY scripts/ ./scripts/
+COPY docker/ ./docker/
 
 # Copy built frontend from Stage 1
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
@@ -50,9 +50,6 @@ RUN mkdir -p logs && mkdir -p database
 # Uncomment to pre-seed database during build:
 # RUN cd /app && python -c "from backend.db_init import initialize_app_database; initialize_app_database()"
 
-# Copy environment template
-COPY .env.example .env
-
 # Expose port (Railway will proxy)
 EXPOSE 5000
 
@@ -61,4 +58,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health', timeout=5)"
 
 # Run Python startup script that seeds database and starts Flask
-CMD ["python", "run.py"]
+CMD ["python", "scripts/run.py"]
