@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Use relative base URL for same-origin requests
+const API_BASE_URL = '';  // Empty = relative URL, axios will use http://localhost:5000 automatically
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -85,18 +86,75 @@ export const deviceAPI = {
 // Sensor APIs
 export const sensorAPI = {
     getSensorData: async (sensorType, params = {}) => {
-        const { data } = await api.get(`/api/sensor/${sensorType}`, { params });
-        return data;
+        try {
+            // Try public endpoint first (no auth required)
+            console.log(`[API] Fetching /api/sensor/${sensorType}/public...`);
+            const { data } = await api.get(`/api/sensor/${sensorType}/public`, { params });
+            console.log(`[API] /api/sensor/${sensorType}/public response:`, data);
+            return data;
+        } catch (error) {
+            console.log(`[API] /api/sensor/${sensorType}/public failed, trying authenticated endpoint...`);
+            try {
+                // Fallback to authenticated endpoint
+                console.log(`[API] Fetching /api/sensor/${sensorType}...`);
+                const { data } = await api.get(`/api/sensor/${sensorType}`, { params });
+                console.log(`[API] /api/sensor/${sensorType} response:`, data);
+                return data;
+            } catch (error2) {
+                console.error(`[API] Both sensor endpoints failed:`, error, error2);
+                return { data: [], timestamp: null };
+            }
+        }
     },
 
     getSensorHistory: async (params = {}) => {
-        const { data } = await api.get('/api/sensor-history', { params });
-        return data;
+        try {
+            // Try public endpoint first (no auth required)
+            console.log('[API] Fetching /api/sensor-history/public...');
+            const { data } = await api.get('/api/sensor-history/public', { params });
+            console.log('[API] /api/sensor-history/public response:', data);
+            return data;
+        } catch (error) {
+            console.log('[API] /api/sensor-history/public failed, trying authenticated endpoint...');
+            try {
+                // Fallback to authenticated endpoint
+                console.log('[API] Fetching /api/sensor-history...');
+                const { data } = await api.get('/api/sensor-history', { params });
+                console.log('[API] /api/sensor-history response:', data);
+                return data;
+            } catch (error2) {
+                console.error('[API] Both sensor history endpoints failed:', error, error2);
+                return { data: [], timestamp: null };
+            }
+        }
     },
 
     getStatistics: async () => {
-        const { data } = await api.get('/api/statistics');
-        return data;
+        try {
+            // Try public endpoint first (no auth required)
+            console.log('[API] Fetching /api/statistics/public...');
+            const { data } = await api.get('/api/statistics/public');
+            console.log('[API] /api/statistics/public response:', data);
+            return data;
+        } catch (error) {
+            console.log('[API] /api/statistics/public failed, trying authenticated endpoint...');
+            try {
+                // Fallback to authenticated endpoint
+                console.log('[API] Fetching /api/statistics...');
+                const { data } = await api.get('/api/statistics');
+                console.log('[API] /api/statistics response:', data);
+                return data;
+            } catch (error2) {
+                console.error('[API] Both statistics endpoints failed:', error, error2);
+                return {
+                    total_devices: 0,
+                    active_devices: 0,
+                    sensor_types: [],
+                    first_device_update: null,
+                    last_device_update: null
+                };
+            }
+        }
     },
 };
 

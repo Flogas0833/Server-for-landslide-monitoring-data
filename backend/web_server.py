@@ -71,7 +71,7 @@ else:
     app = Flask(__name__)
 
 # Get allowed origins from environment variable
-allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000').split(',')
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:5000,http://localhost:3000').split(',')
 allowed_origins = [origin.strip() for origin in allowed_origins]  # Remove whitespace
 
 CORS(app, resources={
@@ -649,6 +649,101 @@ def get_sensor_history():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============ PUBLIC SENSOR DATA ENDPOINTS (NO AUTH REQUIRED) ============
+
+@app.route('/api/sensor/<sensor_type>/public', methods=['GET'])
+def get_sensor_data_public(sensor_type):
+    """Get latest readings for a sensor type (PUBLIC - no auth required)"""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        device_id = request.args.get('device_id', None, type=str)
+        start_date = request.args.get('start_date', None, type=str)
+        end_date = request.args.get('end_date', None, type=str)
+        
+        # Validate limit
+        limit = min(limit, 1000)  # Max 1000 records per request
+        
+        result = db.get_readings_with_filters(
+            sensor_type=sensor_type,
+            device_id=device_id,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            offset=offset
+        )
+        
+        # Convert timestamps to GMT+7
+        convert_timestamps_in_response(result)
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/sensor-history/public', methods=['GET'])
+def get_sensor_history_public():
+    """Get sensor readings with advanced filtering (PUBLIC - no auth required)
+    
+    Query Parameters:
+    - sensor_type: Type of sensor (tilt, vibration, displacement, rainfall, temperature, gnss)
+    - device_id: Filter by specific device
+    - start_date: ISO format (2026-04-01T00:00:00)
+    - end_date: ISO format (2026-04-08T23:59:59)
+    - limit: Records per page (default: 50, max: 1000)
+    - offset: Pagination offset (default: 0)
+    """
+    try:
+        sensor_type = request.args.get('sensor_type', None, type=str)
+        device_id = request.args.get('device_id', None, type=str)
+        start_date = request.args.get('start_date', None, type=str)
+        end_date = request.args.get('end_date', None, type=str)
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        # Validate limit
+        limit = min(max(limit, 1), 1000)  # Between 1 and 1000
+        offset = max(offset, 0)
+        
+        if not sensor_type:
+            return jsonify({'error': 'sensor_type parameter is required'}), 400
+        
+        result = db.get_readings_with_filters(
+            sensor_type=sensor_type,
+            device_id=device_id,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            offset=offset
+        )
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/statistics/public', methods=['GET'])
+def get_statistics_public():
+    """Get statistics about devices and sensors (PUBLIC - no auth required)"""
+    try:
+        devices = db.get_all_devices()
+        devices_with_location = [d for d in devices if d.get('latitude') and d.get('longitude')]
+        
+        stats = {
+            'total_devices': len(devices),
+            'active_devices': len(devices_with_location),
+            'sensor_types': ['tilt', 'vibration', 'displacement', 'rainfall', 'temperature', 'gnss'],
+            'first_device_update': min([d.get('last_update') for d in devices_with_location]) 
+                                   if devices_with_location else None,
+            'last_device_update': max([d.get('last_update') for d in devices_with_location])
+                                   if devices_with_location else None
+        }
+        
+        # Convert timestamps to GMT+7
+        convert_timestamps_in_response(stats, timestamp_fields=['first_device_update', 'last_device_update'])
+        
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/export/csv', methods=['GET'])
 @require_auth(allowed_roles=['admin', 'operator'])
 def export_sensor_csv():
@@ -918,6 +1013,43 @@ def get_alerts():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/alerts/public', methods=['GET'])
+def get_alerts_public():
+    """Get alerts (public version) - same as /api/alerts but without auth requirement
+    
+    Query parameters:
+        - level: Filter by danger level (optional)
+        - limit: Max results (-1 for no limit, default: -1)
+        - acknowledged: Filter by status (optional)
+    """
+    try:
+        danger_level = request.args.get('level', None, type=str)
+        limit = request.args.get('limit', -1, type=int)
+        acknowledged_param = request.args.get('acknowledged', None, type=str)
+        
+        # Convert string parameter to boolean if provided
+        acknowledged = None
+        if acknowledged_param:
+            acknowledged = acknowledged_param.lower() == 'true'
+        
+        alerts = alert_manager.get_active_alerts(danger_level=danger_level, limit=limit, acknowledged=acknowledged)
+        
+        # Convert alert timestamps to GMT+7
+        for alert in alerts:
+            if alert.get('timestamp'):
+                alert['timestamp'] = utc_to_gmt7(alert['timestamp'])
+            if alert.get('acknowledged_at'):
+                alert['acknowledged_at'] = utc_to_gmt7(alert['acknowledged_at'])
+        
+        return jsonify({
+            'alerts': alerts,
+            'total': len(alerts),
+            'timestamp': now_gmt7_iso()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/alerts/history', methods=['GET'])
 def get_alerts_history():
     """Get alert history"""
@@ -986,6 +1118,20 @@ def get_alert_stats():
 @require_auth()
 def get_daily_alerts():
     """Get alert counts grouped by day for the past N days"""
+    try:
+        days = request.args.get('days', 30, type=int)
+        daily_alerts = alert_manager.get_daily_alerts(days=days)
+        
+        return jsonify({
+            'daily_alerts': daily_alerts,
+            'timestamp': now_gmt7_iso()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/daily/public', methods=['GET'])
+def get_daily_alerts_public():
+    """Get alert counts grouped by day for the past N days (PUBLIC - no auth required)"""
     try:
         days = request.args.get('days', 30, type=int)
         daily_alerts = alert_manager.get_daily_alerts(days=days)

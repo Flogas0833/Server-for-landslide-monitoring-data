@@ -76,29 +76,50 @@ export const StatisticsPage = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const token = localStorage.getItem('access_token');
+                // Try public endpoint first (no auth required)
+                console.log('[StatisticsPage] Fetching /api/statistics/public...');
+                let statsResponse;
+                try {
+                    statsResponse = await axios.get('/api/statistics/public');
+                    console.log('[StatisticsPage] /api/statistics/public success:', statsResponse.data);
+                } catch (err) {
+                    console.warn('[StatisticsPage] /api/statistics/public failed, trying authenticated endpoint:', err);
+                    const token = localStorage.getItem('access_token');
+                    statsResponse = await axios.get('/api/statistics', {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    console.log('[StatisticsPage] /api/statistics (auth) success:', statsResponse.data);
+                }
 
-                // Fetch main statistics
-                const statsResponse = await axios.get('/api/statistics', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
                 setStats(statsResponse.data);
                 // Save to localStorage for fallback use
                 localStorage.setItem('last_statistics', JSON.stringify(statsResponse.data));
 
-                // Fetch daily alert data
+                // Fetch daily alert data - try public endpoint first
                 try {
-                    const dailyAlertsResponse = await axios.get('/api/alerts/daily', {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
+                    console.log('[StatisticsPage] Fetching /api/alerts/daily/public...');
+                    const dailyAlertsResponse = await axios.get('/api/alerts/daily/public');
+                    console.log('[StatisticsPage] /api/alerts/daily/public success:', dailyAlertsResponse.data);
                     const dailyData = dailyAlertsResponse.data.daily_alerts || [];
                     setDailyAlertData(dailyData);
                     localStorage.setItem('daily_alert_data', JSON.stringify(dailyData));
                 } catch (err) {
-                    console.warn('Error fetching daily alerts:', err);
-                    const savedDailyData = localStorage.getItem('daily_alert_data');
-                    if (savedDailyData) {
-                        setDailyAlertData(JSON.parse(savedDailyData));
+                    console.warn('[StatisticsPage] /api/alerts/daily/public failed, trying authenticated:', err);
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        const dailyAlertsResponse = await axios.get('/api/alerts/daily', {
+                            headers: { Authorization: `Bearer ${token}` },
+                        });
+                        console.log('[StatisticsPage] /api/alerts/daily (auth) success:', dailyAlertsResponse.data);
+                        const dailyData = dailyAlertsResponse.data.daily_alerts || [];
+                        setDailyAlertData(dailyData);
+                        localStorage.setItem('daily_alert_data', JSON.stringify(dailyData));
+                    } catch (authErr) {
+                        console.warn('Error fetching daily alerts with auth:', authErr);
+                        const savedDailyData = localStorage.getItem('daily_alert_data');
+                        if (savedDailyData) {
+                            setDailyAlertData(JSON.parse(savedDailyData));
+                        }
                     }
                 }
 

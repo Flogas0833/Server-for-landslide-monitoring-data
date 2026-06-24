@@ -32,11 +32,25 @@ export default function AlertsPage() {
     const fetchAlerts = async () => {
         try {
             setError(null);
-            const token = localStorage.getItem('access_token');
-            const response = await axios.get('/api/alerts', {
-                params: { limit: 9999999 },
-                headers: { Authorization: `Bearer ${token}` },
-            });
+
+            // Try public endpoint first
+            console.log('[AlertsPage] Fetching /api/alerts/public...');
+            let response;
+            try {
+                response = await axios.get('/api/alerts/public', {
+                    params: { limit: 9999999 },
+                });
+                console.log('[AlertsPage] /api/alerts/public success:', response.data);
+            } catch (err) {
+                console.warn('[AlertsPage] /api/alerts/public failed, trying authenticated endpoint:', err);
+                const token = localStorage.getItem('access_token');
+                response = await axios.get('/api/alerts', {
+                    params: { limit: 9999999 },
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                console.log('[AlertsPage] /api/alerts (auth) success:', response.data);
+            }
+
             // Map danger_level from backend to severity for frontend
             const alertsWithSeverity = (response.data.alerts || []).map(alert => ({
                 ...alert,
