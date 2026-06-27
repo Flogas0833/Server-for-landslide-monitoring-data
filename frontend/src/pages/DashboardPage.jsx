@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import Statistics from '../components/Statistics';
 import AlertPanel from '../components/AlertPanel';
 import { SensorTable } from '../components/SensorTable';
@@ -33,14 +34,47 @@ export default function DashboardPage() {
         ...dateRange,
     };
 
-    const handleExportExcel = () => {
-        const queryParams = new URLSearchParams({
-            sensor_type: selectedSensor,
-            ...(deviceFilter && { device_id: deviceFilter }),
-            start_date: dateRange.start_date,
-            end_date: dateRange.end_date,
-        });
-        window.open(`/api/sensors/export?${queryParams.toString()}`, '_blank');
+    const handleExportExcel = async () => {
+        try {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                alert('Vui lòng đăng nhập để xuất dữ liệu');
+                return;
+            }
+
+            const queryParams = new URLSearchParams({
+                sensor_type: selectedSensor,
+                ...(deviceFilter && { device_id: deviceFilter }),
+                start_date: dateRange.start_date,
+                end_date: dateRange.end_date,
+            });
+
+            const response = await axios.get(`/api/export/csv?${queryParams.toString()}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                responseType: 'blob'
+            });
+
+            // Create a blob and download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `sensor_data_${selectedSensor}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Export error:', error);
+            if (error.response?.status === 401) {
+                alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại');
+            } else if (error.response?.status === 403) {
+                alert('Bạn không có quyền xuất dữ liệu');
+            } else {
+                alert('Lỗi xuất dữ liệu. Vui lòng thử lại');
+            }
+        }
     };
 
     return (

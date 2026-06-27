@@ -88,10 +88,10 @@ export default function MapPage() {
                                                     <div className="bg-muted p-2 rounded">
                                                         <Badge className="mb-1">Tilt (Nghịeng)</Badge>
                                                         <p className="text-xs">
-                                                            Gọc Ngang: <span className="font-mono">{deviceDetail.readings.tilt[0].data?.roll}°</span>
+                                                            Góc Ngang: <span className="font-mono">{deviceDetail.readings.tilt[0].data?.roll}°</span>
                                                         </p>
                                                         <p className="text-xs">
-                                                            Gọc Dọc: <span className="font-mono">{deviceDetail.readings.tilt[0].data?.pitch}°</span>
+                                                            Góc Dọc: <span className="font-mono">{deviceDetail.readings.tilt[0].data?.pitch}°</span>
                                                         </p>
                                                     </div>
                                                 )}

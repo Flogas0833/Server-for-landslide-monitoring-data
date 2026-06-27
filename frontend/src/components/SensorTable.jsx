@@ -31,12 +31,12 @@ function TiltTable({ sensorType, params }) {
             }),
             columnHelper.accessor((row) => row.data?.roll, {
                 id: 'roll',
-                header: 'Gọc Ngang (°)',
+                header: 'Góc Ngang (°)',
                 cell: (info) => formatValue(info.getValue()),
             }),
             columnHelper.accessor((row) => row.data?.pitch, {
                 id: 'pitch',
-                header: 'Gọc Dọc (°)',
+                header: 'Góc Dọc (°)',
                 cell: (info) => formatValue(info.getValue()),
             }),
         ],
